@@ -244,7 +244,7 @@
       if (!pane) return;
       pane.querySelectorAll('[data-name*="Nút"], [data-name*="Action"]').forEach(function (btn) {
         var txt = app.getText(btn);
-        if (txt.indexOf('Đổi lịch') !== -1 || txt.indexOf('Đổi giờ') !== -1) {
+        if (txt.indexOf('Đổi ngày') !== -1 || txt.indexOf('Đổi lịch') !== -1 || txt.indexOf('Đổi giờ') !== -1) {
           btn.setAttribute('data-oceania-handled', '1');
           btn.addEventListener('click', function (e) {
             e.preventDefault();

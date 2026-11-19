@@ -7,7 +7,7 @@
  *  3. Header Live Search Autocomplete (12+ signature dishes with thumbnail & "Đang phục vụ" status)
  *  4. Global Navigation Router, Dish/Blog/Branch card click handlers, Mobile Drawer (S22)
  *  5. Homepage (index.html): 3-Topic Hero Carousel, Fast Booking Quick-Bar, Category Tab Filter with Fade-In
- *  6. Menu (menu.html) & Dish Detail (dish-detail.html): Culinary & Nutrition Database, realtime search & filter
+ *  6. Menu (menu.html): Culinary & Nutrition Database, realtime search, lightbox & category filters
  *  7. Pricing (pricing.html): Interactive Cost Calculator & Kids Height Ruler
  *  8. Promotions (promotions.html): Live Flashsale Countdown, Promo Code Modal (S14), Group Party Form (S15)
  *  9. Blog (blog.html) & Post Detail (post-detail.html): Editorial Filter, Search & Live Comments (S21)
@@ -554,7 +554,6 @@
       'index.html': 'trang chủ',
       'about.html': 'giới thiệu',
       'menu.html': 'thực đơn',
-      'dish-detail.html': 'thực đơn',
       'pricing.html': 'bảng giá',
       'promotions.html': 'ưu đãi',
       'blog.html': 'cẩm nang',
@@ -576,11 +575,13 @@
   }
 
   /* ==========================================================================
-     4. HEADER LIVE SEARCH AUTOCOMPLETE (12+ DISHES WITH THUMBNAIL & STATUS)
+     4. HEADER LIVE SEARCH AUTOCOMPLETE (DESKTOP + S11 DRAWER + S22 MOBILE)
      ========================================================================== */
   function initGlobalSearchAutocomplete() {
     var searchDrawer = document.getElementById('oceania-search-drawer');
-    var searchInputs = document.querySelectorAll('.oceania-header-search-input');
+    var searchInputs = document.querySelectorAll('.oceania-header-search-input, #oceania-drawer-search-input');
+    var mobileSearchInp = document.getElementById('oceania-mobile-search-input');
+    var mobileResultsBox = document.getElementById('oceania-mobile-search-results');
 
     var liveResultsBox = null;
     if (searchDrawer) {
@@ -590,29 +591,29 @@
       searchDrawer.appendChild(liveResultsBox);
     }
 
-    function renderAutocompleteItems(query) {
-      if (!liveResultsBox) return;
+    function renderAutocompleteItems(query, targetBox, limitCount) {
+      if (!targetBox) return;
       var q = (query || '').trim().toLowerCase();
       var matches = DISH_DATABASE.filter(function (d) {
         if (!q) return true;
         return d.title.toLowerCase().indexOf(q) !== -1 || d.category.toLowerCase().indexOf(q) !== -1 || d.station.toLowerCase().indexOf(q) !== -1;
-      }).slice(0, 8);
+      }).slice(0, limitCount || 8);
 
-      var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-        '<p style="font-size:12px;font-weight:700;color:#ff5a36;letter-spacing:1.2px;text-transform:uppercase;">' +
-        (q ? ('KẾT QUẢ TÌM KIẾM TỨC THÌ CHO "' + query + '" (' + matches.length + ' MÓN)') : 'DANH SÁCH MÓN ĐANG PHỤC VỤ TẠI QUẦY LINE (12 MÓN TIÊU BIỂU)') +
+      var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">' +
+        '<p style="font-size:12px;font-weight:700;color:#ff5a36;letter-spacing:1.1px;text-transform:uppercase;">' +
+        (q ? ('KẾT QUẢ CHO "' + query + '" (' + matches.length + ' MÓN)') : '12 MÓN ĐANG PHỤC VỤ TẠI QUẦY LINE') +
         '</p>' +
         '<a href="menu.html' + (q ? ('?q=' + encodeURIComponent(query)) : '') + '" style="font-size:12px;font-weight:600;color:#07192f;text-decoration:underline;">Xem toàn bộ 50+ món →</a>' +
         '</div>';
 
       if (matches.length === 0) {
-        html += '<p style="font-size:13px;color:#64748b;padding:12px 0;">Không tìm thấy món ăn khớp từ khóa. Gợi ý: Tôm hùm bông, Cua Cà Mau, Bò Wagyu, Sashimi, Lẩu Tomyum...</p>';
+        html += '<p style="font-size:13px;color:#64748b;padding:8px 0;">Không tìm thấy món ăn khớp từ khóa. Gợi ý: Tôm hùm bông, Cua Cà Mau, Bò Wagyu, Sashimi, Lẩu Tomyum...</p>';
       } else {
-        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">';
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;">';
         matches.forEach(function (dish) {
-          html += '<a href="dish-detail.html?dish=' + encodeURIComponent(dish.title) + '" ' +
-            'style="display:flex;align-items:center;gap:12px;padding:8px 10px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:6px;text-decoration:none;color:#1e293b;">' +
-            '<img src="' + dish.image + '" alt="' + dish.title + '" style="width:52px;height:42px;object-fit:cover;border-radius:4px;flex-shrink:0;"/>' +
+          html += '<a href="menu.html?q=' + encodeURIComponent(dish.title) + '" ' +
+            'style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f8f9fa;border:1px solid #e2e8f0;border-radius:6px;text-decoration:none;color:#1e293b;">' +
+            '<img src="' + dish.image + '" alt="' + dish.title + '" style="width:48px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;"/>' +
             '<div style="min-width:0;flex:1;">' +
             '<p style="font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + dish.title + '</p>' +
             '<p style="font-size:11px;color:#0d9488;font-weight:600;">● ' + dish.status + '</p>' +
@@ -621,20 +622,26 @@
         });
         html += '</div>';
       }
-      liveResultsBox.innerHTML = html;
+      targetBox.innerHTML = html;
     }
+
+    window.OceaniaRenderSearch = function (q) {
+      renderAutocompleteItems(q || '', liveResultsBox, 8);
+    };
 
     searchInputs.forEach(function (inp) {
       inp.addEventListener('focus', function () {
         if (searchDrawer) {
           searchDrawer.classList.add('open');
-          renderAutocompleteItems(inp.value);
+          renderAutocompleteItems(inp.value, liveResultsBox, 8);
         }
       });
       inp.addEventListener('input', function () {
+        var val = inp.value;
+        searchInputs.forEach(function (other) { if (other !== inp) other.value = val; });
         if (searchDrawer) {
           searchDrawer.classList.add('open');
-          renderAutocompleteItems(inp.value);
+          renderAutocompleteItems(val, liveResultsBox, 8);
         }
       });
       inp.addEventListener('keydown', function (e) {
@@ -648,12 +655,32 @@
       });
     });
 
+    if (mobileSearchInp && mobileResultsBox) {
+      mobileSearchInp.addEventListener('input', function () {
+        var q = mobileSearchInp.value.trim();
+        if (!q) {
+          mobileResultsBox.innerHTML = '';
+          return;
+        }
+        renderAutocompleteItems(q, mobileResultsBox, 4);
+      });
+      mobileSearchInp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var q = mobileSearchInp.value.trim();
+          window.location.href = 'menu.html' + (q ? '?q=' + encodeURIComponent(q) : '');
+        }
+      });
+    }
+
     if (searchDrawer) {
+      renderAutocompleteItems('', liveResultsBox, 8);
       searchDrawer.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-name*="Từ khóa"], [data-name*="Gợi ý"], [data-name*="Món"], [data-name*="Action"], [data-name*="Nút"]');
+        if (e.target.closest('a, input')) return;
+        var btn = e.target.closest('[data-name*="Từ khóa"], [data-name*="Gợi ý"], [data-name*="Món"], [data-name*="Action"], [data-name*="Nút"], [data-node-id="3375:38961"]');
         if (!btn) return;
         var txt = getText(btn);
-        if (txt.indexOf('Đóng') !== -1 || txt === '✕') {
+        if (txt.indexOf('Đóng') !== -1 || txt === '✕' || txt === '×') {
           searchDrawer.classList.remove('open');
           return;
         }
@@ -661,58 +688,118 @@
           window.location.href = 'menu.html';
           return;
         }
+        if (btn.getAttribute('data-name') && btn.getAttribute('data-name').indexOf('Từ khóa') !== -1) {
+          var kw = txt.replace(/^#/, '').trim();
+          var drawerInp = document.getElementById('oceania-drawer-search-input');
+          if (drawerInp) drawerInp.value = kw;
+          renderAutocompleteItems(kw, liveResultsBox, 8);
+          return;
+        }
         var dishTitle = txt.split('•')[0].trim();
         if (dishTitle) {
-          window.location.href = 'dish-detail.html?dish=' + encodeURIComponent(dishTitle);
+          window.location.href = 'menu.html?q=' + encodeURIComponent(dishTitle);
         }
       });
     }
   }
 
   /* ==========================================================================
-     5. GLOBAL CLICK ROUTER (NAVIGATION, CARDS, MODALS, NEWSLETTER)
+     5. GLOBAL CLICK ROUTER (NAVIGATION, SEARCH, DRAWERS, CHECKBOXES, MODALS)
      ========================================================================== */
   function initGlobalClickRouter() {
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.oceania-modal-overlay.open').forEach(function (m) { m.classList.remove('open'); });
+        var sd = document.getElementById('oceania-search-drawer');
+        if (sd) sd.classList.remove('open');
+        var md = document.getElementById('oceania-mobile-drawer');
+        if (md) md.classList.remove('open');
+      }
+    });
+
     document.addEventListener('click', function (e) {
-      /* Close modal when clicking backdrop */
+      /* Close modal when clicking backdrop or close buttons */
       if (e.target.classList && e.target.classList.contains('oceania-modal-overlay')) {
         e.target.classList.remove('open');
         return;
       }
+      if (e.target.closest('#oceania-lightbox-close, .oceania-modal-close')) {
+        var om = e.target.closest('.oceania-modal-overlay');
+        if (om) om.classList.remove('open');
+        return;
+      }
+
+      /* Mobile / Tablet search icon click opens live search drawer */
+      var searchDrawer = document.getElementById('oceania-search-drawer');
+      var searchIcon = e.target.closest('[data-name="search"], [data-name="Search"], [data-name="Nút tìm kiếm"]');
+      if (searchIcon && !e.target.closest('#oceania-search-drawer')) {
+        if (searchDrawer) {
+          searchDrawer.classList.toggle('open');
+          if (searchDrawer.classList.contains('open')) {
+            if (window.OceaniaRenderSearch) window.OceaniaRenderSearch('');
+            var dInp = document.getElementById('oceania-drawer-search-input');
+            if (dInp) setTimeout(function () { dInp.focus(); }, 60);
+          }
+          return;
+        }
+      }
 
       /* Close search drawer when clicking outside header/drawer */
-      var searchDrawer = document.getElementById('oceania-search-drawer');
       if (searchDrawer && searchDrawer.classList.contains('open')) {
-        if (!e.target.closest('#oceania-search-drawer') && !e.target.closest('[data-name*="Search"]') && !e.target.closest('[data-name*="tìm kiếm"]') && !e.target.closest('.oceania-header-search-input')) {
+        if (!e.target.closest('#oceania-search-drawer') && !e.target.closest('[data-name="search"], [data-name="Search"]') && !e.target.closest('[data-name*="tìm kiếm"]') && !e.target.closest('.oceania-header-search-input')) {
           searchDrawer.classList.remove('open');
         }
       }
 
       /* Mobile / Tablet menu drawer open/close */
       var mobDrawer = document.getElementById('oceania-mobile-drawer');
-      var mobTrigger = e.target.closest('[data-name="Nút menu"], [data-name="Menu"], [data-node-id="3375:36593"], [data-node-id="3504:2057"]');
+      var mobTrigger = e.target.closest('[data-name="menu"], [data-name="Nút menu"], [data-name="Menu"], [data-node-id="3375:36593"], [data-node-id="3504:2057"]');
       if (mobTrigger && mobDrawer) {
         mobDrawer.classList.toggle('open');
         return;
       }
       if (mobDrawer && mobDrawer.classList.contains('open')) {
-        var closeBtn = e.target.closest('[data-name="Nút đóng"], [data-node-id="3375:39481"]');
-        if (closeBtn) {
+        var closeBtn = e.target.closest('[data-name="Nút đóng"], [data-node-id="3375:39481"], [data-node-id="3375:39494"]');
+        if (closeBtn || (!e.target.closest('#oceania-mobile-drawer > div') && !e.target.closest('[data-name="menu"], [data-name="Nút menu"], [data-name="Menu"]'))) {
           mobDrawer.classList.remove('open');
           return;
         }
       }
 
-      /* Global Header / Footer / Drawer Navigation Items */
+      /* Interactive Checkbox Toggle (☐ <-> ☑) inside Forms */
+      var chkNode = e.target.closest('p, div');
+      if (chkNode && !chkNode.hasAttribute('data-oceania-handled') && !e.target.closest('input, select, textarea, a[href]')) {
+        var directTxt = chkNode.tagName === 'P' ? getText(chkNode) : '';
+        if (directTxt && (directTxt.charAt(0) === '☐' || directTxt.charAt(0) === '☑') && !chkNode.closest('#booking-step-3, #booking-step-3-error')) {
+          var isChecked = directTxt.charAt(0) === '☑';
+          chkNode.textContent = (isChecked ? '☐' : '☑') + directTxt.slice(1);
+          chkNode.style.color = isChecked ? '#64748b' : '#07192f';
+          return;
+        }
+      }
+
+      /* Policy Modal Link Interception in Footer */
+      var policyTrigger = e.target.closest('[data-name="Footer"] p, [data-name="Chân trang"] p');
+      if (policyTrigger && !e.target.closest('input')) {
+        var pTxt = getText(policyTrigger).toLowerCase();
+        if (pTxt.indexOf('điều khoản') !== -1 || pTxt.indexOf('chính sách bảo mật') !== -1 || pTxt.indexOf('an toàn thực phẩm') !== -1) {
+          openModal('oceania-policy-modal');
+          return;
+        }
+      }
+
+      /* Global Header / Footer / Drawer / Sticky Bottom Bar / CTA Navigation Items */
       var navItem = e.target.closest(
         '[data-name="Navigation item"], [data-name="Tuyển dụng"], [data-name="Mục menu"], ' +
         '[data-name="Oceania wordmark"], [data-name="Logo"], ' +
         '[data-name="Booking action"], [data-name="Nút đặt bàn"], ' +
         '[data-name="Consultation action"], [data-name="Nút tư vấn"], ' +
+        '[data-name="Truy cập đặt bàn"], ' +
+        '[data-name="Thanh hành động"] [data-name*="Nút"], [data-name="Thanh hành động"] p, ' +
         '[data-name="Guest services"] p, [data-name="Dịch vụ khách"] p, ' +
         '[data-name="Footer"] p, [data-name="Chân trang"] p'
       );
-      if (navItem && !navItem.hasAttribute('data-oceania-handled') && !e.target.closest('input, select, textarea')) {
+      if (navItem && !navItem.hasAttribute('data-oceania-handled') && !e.target.closest('input, select, textarea, a[href]')) {
         var navTxt = getText(navItem).toLowerCase();
         var nameAttr = (navItem.getAttribute('data-name') || '').toLowerCase();
         if (nameAttr.indexOf('wordmark') !== -1 || nameAttr === 'logo' || navTxt === 'trang chủ') {
@@ -723,11 +810,11 @@
           window.location.href = 'about.html';
           return;
         }
-        if (navTxt === 'thực đơn' || navTxt.indexOf('thực đơn 50+ món') !== -1 || navTxt.indexOf('xem toàn bộ thực đơn') !== -1) {
+        if (navTxt === 'thực đơn' || navTxt.indexOf('thực đơn 50+ món') !== -1 || navTxt.indexOf('xem toàn bộ thực đơn') !== -1 || navTxt === 'xem thực đơn') {
           window.location.href = 'menu.html';
           return;
         }
-        if (navTxt === 'bảng giá' || navTxt.indexOf('bảng giá buffet') !== -1) {
+        if (navTxt === 'bảng giá' || navTxt.indexOf('bảng giá buffet') !== -1 || navTxt === 'xem bảng giá') {
           window.location.href = 'pricing.html';
           return;
         }
@@ -747,7 +834,7 @@
           window.location.href = 'careers.html';
           return;
         }
-        if (navTxt.indexOf('tra cứu đặt bàn') !== -1 || navTxt.indexOf('tra cứu vé') !== -1) {
+        if (navTxt.indexOf('tra cứu đặt bàn') !== -1 || navTxt.indexOf('tra cứu vé') !== -1 || navTxt === 'tra cứu') {
           window.location.href = 'booking-lookup.html';
           return;
         }
@@ -755,7 +842,7 @@
           window.location.href = 'reviews.html';
           return;
         }
-        if (nameAttr.indexOf('booking action') !== -1 || nameAttr.indexOf('nút đặt bàn') !== -1 || navTxt === 'đặt bàn' || navTxt === 'đặt bàn ngay') {
+        if (nameAttr.indexOf('booking action') !== -1 || nameAttr.indexOf('nút đặt bàn') !== -1 || navTxt === 'đặt bàn' || navTxt.indexOf('đặt bàn ngay') !== -1) {
           window.location.href = 'booking.html';
           return;
         }
@@ -765,25 +852,38 @@
         }
       }
 
-      /* Newsletter submit in Footer */
-      var newsBtn = e.target.closest('[data-name="Newsletter form"] [data-name="Subscribe"], [data-name="Form nhận tin"] [data-name="Nút đăng ký"], [data-node-id="3346:336"]');
+      /* Newsletter submit in Footer & Blog Sidebar (Desktop + Tablet + Mobile) */
+      var newsBtn = e.target.closest(
+        '[data-name="Newsletter form"] [data-name="Subscribe"], ' +
+        '[data-name="Form nhận tin"] [data-name="Nút đăng ký"], ' +
+        '[data-name="Bản tin"] [data-name="Nút hành động"], ' +
+        '[data-name="Bản tin"] [data-name="Nút gửi"], ' +
+        '[data-node-id="3346:336"], [data-node-id="3361:13493"]'
+      );
+      if (!newsBtn) {
+        var bCand = e.target.closest('[data-name="Nút hành động"], [data-name*="Nút"]');
+        if (bCand && bCand.closest('[data-name="Bản tin"], [data-name="Newsletter form"]')) {
+          newsBtn = bCand;
+        }
+      }
       if (newsBtn) {
         e.preventDefault();
-        var wrap = newsBtn.closest('[data-name="Newsletter form"], [data-name="Form nhận tin"]') || newsBtn.parentElement;
+        var wrap = newsBtn.closest('[data-name="Newsletter form"], [data-name="Form nhận tin"], [data-name="Bản tin"]') || newsBtn.parentElement;
         var emailInp = wrap ? wrap.querySelector('input') : null;
         var val = emailInp ? emailInp.value.trim() : '';
-        if (!val || val.indexOf('@') === -1) {
-          showToast('Vui lòng nhập địa chỉ email hợp lệ để nhận ưu đãi Oceania Club.');
+        if (!val || val.indexOf('@') === -1 || val.indexOf('.') === -1) {
+          showToast('Vui lòng nhập địa chỉ email hợp lệ (VD: ten@gmail.com) để nhận voucher Oceania Club.');
+          if (emailInp) emailInp.focus();
         } else {
-          showToast('Đăng ký thành công! Voucher giảm 10% đã được gửi tới ' + val);
+          showToast('Đăng ký thành công! Mã voucher giảm 10% OCN-WELCOME đã được gửi tới ' + val);
           if (emailInp) emailInp.value = '';
         }
         return;
       }
 
-      /* Dish Card click -> dish-detail.html?dish=... */
+      /* Dish Card click -> on menu.html open quick lightbox preview; on other pages go to menu.html?q=... */
       var dishCard = e.target.closest('[data-name="Featured dish"], [data-name="Dish card"], [data-name="Món ăn"], [data-name="Món phù hợp"]');
-      if (dishCard && !e.target.closest('input, select, textarea')) {
+      if (dishCard && !e.target.closest('input, select, textarea, a[href]')) {
         var ps = dishCard.querySelectorAll('p');
         var dishName = '';
         for (var i = 0; i < ps.length; i++) {
@@ -794,7 +894,20 @@
           }
         }
         if (dishName) {
-          window.location.href = 'dish-detail.html?dish=' + encodeURIComponent(dishName);
+          var curPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+          if (curPage === 'menu.html') {
+            var rec = findDishRecord(dishName);
+            var lbImg = document.getElementById('oceania-lightbox-img');
+            var lbTitle = document.getElementById('oceania-lightbox-title');
+            var lbCap = document.getElementById('oceania-lightbox-caption');
+            var cardImg = dishCard.querySelector('img');
+            if (lbImg) lbImg.src = (cardImg && cardImg.getAttribute('src')) ? cardImg.getAttribute('src') : rec.image;
+            if (lbTitle) lbTitle.textContent = dishName;
+            if (lbCap) lbCap.textContent = rec.station + ' — ' + rec.desc;
+            openModal('oceania-lightbox-modal');
+          } else {
+            window.location.href = 'menu.html?q=' + encodeURIComponent(dishName);
+          }
           return;
         }
       }
@@ -840,33 +953,62 @@
         var href = linkNode.getAttribute('data-oceania-link');
         if (href) {
           window.location.href = href;
+          return;
+        }
+      }
+
+      /* Universal Fallback for any remaining Figma <a:not([href])> or CTA buttons */
+      var ctaFallback = e.target.closest('a:not([href]), button[data-node-id], [data-name="Action"], [data-name="Primary action"], [data-name="Secondary action"], [data-name="Nút hành động"], [data-name="Nút chính"], [data-name="Nút phụ"]');
+      if (ctaFallback && !ctaFallback.hasAttribute('data-oceania-handled') && !e.target.closest('input, select, textarea, a[href], #oceania-booking-wizard, #oceania-lookup-results, #oceania-lookup-section')) {
+        var cTxt = getText(ctaFallback).toLowerCase();
+        if (cTxt.indexOf('tìm bàn trống') !== -1 || cTxt.indexOf('đặt bàn') !== -1 || cTxt.indexOf('đặt lịch') !== -1) {
+          window.location.href = 'booking.html';
+        } else if (cTxt.indexOf('khám phá thực đơn') !== -1 || cTxt.indexOf('xem thực đơn') !== -1 || cTxt.indexOf('50+ món') !== -1) {
+          window.location.href = 'menu.html';
+        } else if (cTxt.indexOf('khám phá oceania') !== -1 || cTxt.indexOf('câu chuyện') !== -1 || cTxt.indexOf('giới thiệu') !== -1) {
+          window.location.href = 'about.html';
+        } else if (cTxt.indexOf('bảng giá') !== -1 || cTxt.indexOf('chính sách') !== -1) {
+          window.location.href = 'pricing.html';
+        } else if (cTxt.indexOf('tư vấn') !== -1) {
+          window.location.href = 'promotions.html#party-consultation-section';
+        } else if (cTxt.indexOf('xem chi nhánh') !== -1 || cTxt.indexOf('tất cả cơ sở') !== -1 || cTxt.indexOf('bản đồ') !== -1) {
+          window.location.href = 'locations.html';
+        } else if (cTxt.indexOf('tuyển dụng') !== -1) {
+          window.location.href = 'careers.html';
+        } else if (cTxt.indexOf('tra cứu') !== -1) {
+          window.location.href = 'booking-lookup.html';
+        } else if (cTxt.indexOf('cẩm nang') !== -1 || cTxt.indexOf('đọc tất cả') !== -1) {
+          window.location.href = 'blog.html';
+        } else if (cTxt.indexOf('ưu đãi') !== -1) {
+          window.location.href = 'promotions.html';
+        } else if (cTxt.indexOf('oceania club') !== -1 || cTxt.indexOf('đánh giá') !== -1) {
+          window.location.href = 'reviews.html';
         }
       }
     });
   }
 
   /* ==========================================================================
-     6. HOMEPAGE (index.html): HERO SLIDER, FAST BOOKING BAR, TAB FILTER
+     6. HOMEPAGE (index.html): HERO SLIDER (D/T/M), QUICK-BAR, TAB FILTER
      ========================================================================== */
   function initHomepage() {
-    var heroFrame = document.querySelector('.oceania-desktop-view [data-node-id="3346:33"]');
-    if (!heroFrame) return;
-
-    /* 6.1 Hero Slider (3 topics matching Figma Slide topics) */
     var heroSlides = [
       {
+        label: '01 / 03 · Hải sản bơi bể',
         titleLine1: 'Tinh hoa biển cả —',
         titleLine2: 'Bùng vị lửa hồng',
         desc: 'Hải sản tươi ngon, BBQ nướng than hồng và những cuộc sum vầy trọn vị. Hẹn nhau tại Oceania Seafood & BBQ Buffet, chỉ tại TP.HCM.',
         img: 'assets/figma/349d8.png'
       },
       {
+        label: '02 / 03 · Bò Wagyu nướng than',
         titleLine1: 'Thăn ngoại Wagyu —',
         titleLine2: 'Nướng than Binchotan',
         desc: 'Thịt bò vân mỡ cẩm thạch MBS 6-7 áp chảo trên đá muối hồng Himalaya và nướng than Binchotan Nhật Bản không khói, giữ trọn vị ngọt mọng nước.',
         img: 'assets/figma/f0ea2.png'
       },
       {
+        label: '03 / 03 · Không gian đại dương',
         titleLine1: 'Sảnh kính đại dương —',
         titleLine2: 'Phòng tiệc VIP riêng tư',
         desc: 'Hệ thống 3 cơ sở trung tâm TP.HCM (Vincom Q1, Lotte Mart Q7, Cantavil Thủ Đức) với bể hải sản tràn bờ 18m và phòng tiệc VIP từ 10–60 khách.',
@@ -874,70 +1016,89 @@
       }
     ];
 
-    var currentSlide = 0;
-    var heroImg = heroFrame.querySelector('img');
-    var heroTitleWrap = heroFrame.querySelector('[data-node-id="3346:39"]');
-    var heroDesc = heroFrame.querySelector('[data-node-id="3346:40"]');
-    var topicTabs = heroFrame.querySelectorAll('[data-name="Slide topic"]');
+    /* 6.1 Desktop Hero Slider */
+    var heroFrame = document.querySelector('.oceania-desktop-view [data-node-id="3346:33"]');
+    if (heroFrame) {
+      var currentSlide = 0;
+      var heroImg = heroFrame.querySelector('img');
+      var heroTitleWrap = heroFrame.querySelector('[data-node-id="3346:39"]');
+      var heroDesc = heroFrame.querySelector('[data-node-id="3346:40"]');
+      var topicTabs = heroFrame.querySelectorAll('[data-name="Slide topic"]');
 
-    function applyHeroSlide(idx) {
-      currentSlide = (idx + heroSlides.length) % heroSlides.length;
-      var s = heroSlides[currentSlide];
-      if (heroImg) {
-        heroImg.style.opacity = '0.4';
-        setTimeout(function () {
-          heroImg.src = s.img;
-          heroImg.style.opacity = '1';
-        }, 160);
-      }
-      if (heroTitleWrap) {
-        var tps = heroTitleWrap.querySelectorAll('p');
-        if (tps.length >= 2) {
-          tps[0].textContent = s.titleLine1;
-          tps[1].textContent = s.titleLine2;
+      function applyHeroSlide(idx) {
+        currentSlide = (idx + heroSlides.length) % heroSlides.length;
+        var s = heroSlides[currentSlide];
+        if (heroImg) {
+          heroImg.style.opacity = '0.4';
+          setTimeout(function () {
+            heroImg.src = s.img;
+            heroImg.style.opacity = '1';
+          }, 160);
         }
+        if (heroTitleWrap) {
+          var tps = heroTitleWrap.querySelectorAll('p');
+          if (tps.length >= 2) {
+            tps[0].textContent = s.titleLine1;
+            tps[1].textContent = s.titleLine2;
+          }
+        }
+        if (heroDesc) heroDesc.textContent = s.desc;
+        topicTabs.forEach(function (tab, tIdx) {
+          tab.style.borderTopColor = tIdx === currentSlide ? '#d4af37' : '#ffffff';
+          tab.style.borderTopWidth = tIdx === currentSlide ? '2px' : '1px';
+          var btn = tab.querySelector('button, p');
+          if (btn) btn.style.color = tIdx === currentSlide ? '#f8f9fa' : '#c3c9c8';
+        });
       }
-      if (heroDesc) heroDesc.textContent = s.desc;
-      topicTabs.forEach(function (tab, tIdx) {
-        tab.style.borderTopColor = tIdx === currentSlide ? '#d4af37' : '#ffffff';
-        tab.style.borderTopWidth = tIdx === currentSlide ? '2px' : '1px';
-        var btn = tab.querySelector('button, p');
-        if (btn) btn.style.color = tIdx === currentSlide ? '#f8f9fa' : '#c3c9c8';
+
+      topicTabs.forEach(function (tab, idx) {
+        tab.style.cursor = 'pointer';
+        tab.addEventListener('click', function () { applyHeroSlide(idx); });
       });
+      var prevBtn = heroFrame.querySelector('[data-name="Previous"], [data-node-id="3375:25"]');
+      var nextBtn = heroFrame.querySelector('[data-name="Next"], [data-node-id="3375:28"]');
+      if (prevBtn) { prevBtn.style.cursor = 'pointer'; prevBtn.addEventListener('click', function () { applyHeroSlide(currentSlide - 1); }); }
+      if (nextBtn) { nextBtn.style.cursor = 'pointer'; nextBtn.addEventListener('click', function () { applyHeroSlide(currentSlide + 1); }); }
+      setInterval(function () { applyHeroSlide(currentSlide + 1); }, 6500);
     }
 
-    topicTabs.forEach(function (tab, idx) {
-      tab.style.cursor = 'pointer';
-      tab.addEventListener('click', function () {
-        applyHeroSlide(idx);
-      });
+    /* 6.1B Tablet & Mobile Hero Sliders ([data-name="Điều khiển ảnh"]) */
+    document.querySelectorAll('.oceania-tablet-view [data-name="Mở đầu"], .oceania-mobile-view [data-name="Mở đầu"]').forEach(function (tmHero) {
+      var tmIdx = 0;
+      var tmImg = tmHero.querySelector('img');
+      var ctrlWrap = tmHero.querySelector('[data-name="Điều khiển ảnh"]');
+      if (!ctrlWrap) return;
+      var btns = ctrlWrap.querySelectorAll('button');
+      var lblEl = btns[0] ? (btns[0].querySelector('p') || btns[0]) : null;
+      var pBtn = btns[1] || ctrlWrap.querySelector('[data-node-id="3504:2075"], [data-node-id="3375:36609"]');
+      var nBtn = btns[2] || ctrlWrap.querySelector('[data-node-id="3504:3993"], [data-node-id="3504:3988"]');
+      var titleEl = tmHero.querySelector('[data-node-id="3504:2063"] p, [data-node-id="3375:36600"] p');
+      var descEl = tmHero.querySelector('[data-node-id="3504:2064"] p, [data-node-id="3375:36601"] p');
+
+      function applyTmSlide(idx) {
+        tmIdx = (idx + heroSlides.length) % heroSlides.length;
+        var s = heroSlides[tmIdx];
+        if (tmImg) tmImg.src = s.img;
+        if (lblEl) lblEl.textContent = s.label;
+        if (titleEl) titleEl.textContent = s.titleLine1 + ' ' + s.titleLine2;
+        if (descEl) descEl.textContent = s.desc;
+      }
+      if (lblEl && lblEl.parentElement) lblEl.parentElement.addEventListener('click', function () { applyTmSlide(tmIdx + 1); });
+      if (pBtn) pBtn.addEventListener('click', function (e) { e.stopPropagation(); applyTmSlide(tmIdx - 1); });
+      if (nBtn) nBtn.addEventListener('click', function (e) { e.stopPropagation(); applyTmSlide(tmIdx + 1); });
     });
 
-    var prevBtn = heroFrame.querySelector('[data-name="Previous"], [data-node-id="3375:25"]');
-    var nextBtn = heroFrame.querySelector('[data-name="Next"], [data-node-id="3375:28"]');
-    if (prevBtn) {
-      prevBtn.style.cursor = 'pointer';
-      prevBtn.addEventListener('click', function () { applyHeroSlide(currentSlide - 1); });
-    }
-    if (nextBtn) {
-      nextBtn.style.cursor = 'pointer';
-      nextBtn.addEventListener('click', function () { applyHeroSlide(currentSlide + 1); });
-    }
-
-    setInterval(function () {
-      applyHeroSlide(currentSlide + 1);
-    }, 6500);
-
-    /* 6.2 Fast Booking Quick-Bar -> booking.html */
-    var quickBtn = document.querySelector('[data-node-id="3346:81"]');
-    if (quickBtn) {
+    /* 6.2 Fast Booking Quick-Bar -> booking.html (Desktop + Tablet + Mobile) */
+    document.querySelectorAll('[data-node-id="3346:81"], [data-node-id="3504:2087"], [data-node-id="3375:36621"], [data-name="Đặt bàn nhanh"] [data-name="Nút hành động"]').forEach(function (quickBtn) {
       quickBtn.setAttribute('data-oceania-handled', '1');
+      quickBtn.style.cursor = 'pointer';
       quickBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        var branchEl = document.getElementById('quick-branch');
-        var dateEl = document.getElementById('quick-date');
-        var shiftEl = document.getElementById('quick-shift');
-        var guestsEl = document.getElementById('quick-guests');
+        var scope = quickBtn.closest('[data-name="Đặt bàn nhanh"], [data-name="Quick booking"], [data-node-id="3346:55"], [data-node-id="3504:2077"], [data-node-id="3375:36611"]') || quickBtn.parentElement;
+        var branchEl = scope ? scope.querySelector('[data-oceania-field="quick-branch"]') : document.getElementById('quick-branch');
+        var dateEl = scope ? scope.querySelector('[data-oceania-field="quick-date"]') : document.getElementById('quick-date');
+        var shiftEl = scope ? scope.querySelector('[data-oceania-field="quick-shift"]') : document.getElementById('quick-shift');
+        var guestsEl = scope ? scope.querySelector('[data-oceania-field="quick-guests"]') : document.getElementById('quick-guests');
         var params = new URLSearchParams();
         if (branchEl) params.set('branch', branchEl.value);
         if (dateEl) params.set('date', dateEl.value);
@@ -945,15 +1106,17 @@
         if (guestsEl) params.set('guests', guestsEl.value);
         window.location.href = 'booking.html?' + params.toString();
       });
-    }
+    });
 
-    /* 6.3 Homepage Category Tab Filter (50+ dishes preview) with Fade-In */
-    var homeTabsWrap = document.querySelector('[data-node-id="3346:121"]');
-    var homeDishesGrid = document.querySelector('[data-node-id="3346:132"]');
-    if (homeTabsWrap && homeDishesGrid) {
+    /* 6.3 Homepage Category Tab Filter (50+ dishes preview across D/T/M) */
+    document.querySelectorAll('[data-node-id="3346:121"], .oceania-tablet-view [data-name="Thanh tab"], .oceania-mobile-view [data-name="Thanh tab"]').forEach(function (homeTabsWrap) {
+      var sectionScope = homeTabsWrap.parentElement || document;
+      var homeDishesGrid = document.querySelector('[data-node-id="3346:132"]');
+      var dishCards = homeTabsWrap.closest('.oceania-desktop-view') && homeDishesGrid
+        ? homeDishesGrid.querySelectorAll('[data-name="Featured dish"], [data-name="Dish card"]')
+        : (sectionScope.parentElement || document).querySelectorAll('[data-name="Món ăn"], [data-name="Featured dish"], [data-name="Dish card"]');
+
       var tabBtns = Array.from(homeTabsWrap.children);
-      var dishCards = homeDishesGrid.querySelectorAll('[data-name="Featured dish"], [data-name="Dish card"]');
-
       tabBtns.forEach(function (btn) {
         btn.style.cursor = 'pointer';
         btn.addEventListener('click', function () {
@@ -972,9 +1135,11 @@
           dishCards.forEach(function (card) {
             var cardText = getText(card).toLowerCase();
             var match = true;
-            if (cat.indexOf('cua') !== -1 || cat.indexOf('ghẹ') !== -1 || cat.indexOf('bơi bể') !== -1) {
+            if (cat.indexOf('tất cả') !== -1) {
+              match = true;
+            } else if (cat.indexOf('cua') !== -1 || cat.indexOf('ghẹ') !== -1 || cat.indexOf('bơi bể') !== -1 || cat.indexOf('hải sản') !== -1) {
               match = cardText.indexOf('cua') !== -1 || cardText.indexOf('tôm') !== -1 || cardText.indexOf('hàu') !== -1 || cardText.indexOf('ghẹ') !== -1 || cardText.indexOf('bào ngư') !== -1;
-            } else if (cat.indexOf('bò') !== -1 || cat.indexOf('nướng') !== -1) {
+            } else if (cat.indexOf('bò') !== -1 || cat.indexOf('nướng') !== -1 || cat.indexOf('bbq') !== -1) {
               match = cardText.indexOf('bò') !== -1 || cardText.indexOf('sườn') !== -1 || cardText.indexOf('wagyu') !== -1 || cardText.indexOf('nướng') !== -1;
             } else if (cat.indexOf('dimsum') !== -1 || cat.indexOf('sashimi') !== -1) {
               match = cardText.indexOf('sashimi') !== -1 || cardText.indexOf('cá hồi') !== -1 || cardText.indexOf('há cảo') !== -1 || cardText.indexOf('bào ngư') !== -1;
@@ -990,22 +1155,76 @@
           });
         });
       });
-    }
+    });
   }
 
   /* ==========================================================================
-     7. MENU (menu.html) & DISH DETAIL (dish-detail.html)
+     6B. ABOUT PAGE (about.html) & PHOTO LIGHTBOX GALLERY CONTROLLER
+     ========================================================================== */
+  function initLightboxGallery() {
+    var lbModal = document.getElementById('oceania-lightbox-modal');
+    if (!lbModal) return;
+    var lbImg = document.getElementById('oceania-lightbox-img');
+    var lbTitle = document.getElementById('oceania-lightbox-title');
+    var lbCap = document.getElementById('oceania-lightbox-caption');
+    var lbPrev = document.getElementById('oceania-lightbox-prev');
+    var lbNext = document.getElementById('oceania-lightbox-next');
+
+    var slides = [
+      { img: 'assets/figma/da2f6.png', title: 'Sảnh Tiệc Đại Dương — Vincom Đồng Khởi Q1', cap: 'Sức chứa 180 thực khách với kiến trúc vòm sóng biển và bàn đá cẩm thạch sang trọng.' },
+      { img: 'assets/figma/f1d84.png', title: 'Bể Hải Sản Kính Tràn Bờ Dài 18 Mét', cap: 'Cua Cà Mau, Tôm hùm bông, Ghẹ xanh bơi sống tự nhiên, thực khách chọn trực tiếp.' },
+      { img: 'assets/figma/f0ea2.png', title: 'Khu Bếp Mở Nướng Than Binchotan Không Khói', cap: 'Hệ thống hút âm hiện đại nhập khẩu Nhật Bản giúp thực khách thoải mái thưởng thức BBQ không ám mùi.' },
+      { img: 'assets/figma/349d8.png', title: 'Quầy Hải Sản Sốt Trứng Muối & Đút Lò Phô Mai', cap: 'Hơn 50+ món ngon được châm đầy liên tục mỗi 10 phút suốt ca phục vụ.' }
+    ];
+    var lbIdx = 0;
+
+    function showSlide(i) {
+      lbIdx = (i + slides.length) % slides.length;
+      if (lbImg) lbImg.src = slides[lbIdx].img;
+      if (lbTitle) lbTitle.textContent = slides[lbIdx].title;
+      if (lbCap) lbCap.textContent = slides[lbIdx].cap;
+    }
+
+    if (lbPrev) lbPrev.addEventListener('click', function () { showSlide(lbIdx - 1); });
+    if (lbNext) lbNext.addEventListener('click', function () { showSlide(lbIdx + 1); });
+
+    document.querySelectorAll('[data-name="Gallery item"], [data-name="Thẻ không gian"], [data-name="Không gian"] img, [data-name="Bộ sưu tập"] img').forEach(function (el) {
+      el.style.cursor = 'zoom-in';
+      el.addEventListener('click', function (e) {
+        var imgEl = el.tagName === 'IMG' ? el : el.querySelector('img');
+        if (imgEl && imgEl.getAttribute('src')) {
+          var src = imgEl.getAttribute('src');
+          var matched = -1;
+          slides.forEach(function (s, idx) { if (src.indexOf(s.img) !== -1) matched = idx; });
+          if (matched !== -1) {
+            showSlide(matched);
+          } else {
+            if (lbImg) lbImg.src = src;
+            var p = el.closest('[data-node-id]') ? el.closest('[data-node-id]').querySelector('p') : null;
+            if (lbTitle) lbTitle.textContent = p ? getText(p) : 'Không gian Oceania Seafood & BBQ Buffet';
+          }
+          openModal('oceania-lightbox-modal');
+          e.stopPropagation();
+        }
+      });
+    });
+  }
+
+  /* ==========================================================================
+     7. MENU (menu.html): REALTIME SEARCH, CATEGORY TABS & TASTE PILLS
      ========================================================================== */
   function initMenuPage() {
-    var searchInp = document.getElementById('menu-search-input');
+    var searchInputs = document.querySelectorAll('#menu-search-input, [data-oceania-field="menu-search"]');
+    var searchInp = searchInputs[0] || null;
     var allDishCards = document.querySelectorAll('.oceania-desktop-view [data-name="Món ăn"], .oceania-tablet-view [data-name="Món ăn"], .oceania-mobile-view [data-name="Món ăn"]');
-    if (!searchInp && allDishCards.length === 0) return;
+    if (searchInputs.length === 0 && allDishCards.length === 0) return;
 
     var activeCategory = 'all';
     var activeTaste = 'all';
+    var activeQuery = '';
 
     function filterMenuCards() {
-      var q = searchInp ? searchInp.value.trim().toLowerCase() : '';
+      var q = (activeQuery || '').trim().toLowerCase();
       var visibleCount = 0;
 
       allDishCards.forEach(function (card) {
@@ -1014,22 +1233,22 @@
         var matchCat = true;
         if (activeCategory !== 'all') {
           if (activeCategory.indexOf('cua') !== -1 || activeCategory.indexOf('hải sản') !== -1) {
-            matchCat = text.indexOf('cua') !== -1 || text.indexOf('tôm') !== -1 || text.indexOf('ghẹ') !== -1 || text.indexOf('hàu') !== -1 || text.indexOf('bề bề') !== -1 || text.indexOf('bào ngư') !== -1 || text.indexOf('ốc') !== -1 || text.indexOf('mực') !== -1;
-          } else if (activeCategory.indexOf('bò') !== -1 || activeCategory.indexOf('nướng') !== -1) {
+            matchCat = text.indexOf('cua') !== -1 || text.indexOf('tôm') !== -1 || text.indexOf('ghẹ') !== -1 || text.indexOf('hàu') !== -1 || text.indexOf('bề bề') !== -1 || text.indexOf('bào ngư') !== -1 || text.indexOf('ốc') !== -1 || text.indexOf('mực') !== -1 || text.indexOf('sò') !== -1;
+          } else if (activeCategory.indexOf('bò') !== -1 || activeCategory.indexOf('nướng') !== -1 || activeCategory.indexOf('bbq') !== -1) {
             matchCat = text.indexOf('bò') !== -1 || text.indexOf('sườn') !== -1 || text.indexOf('wagyu') !== -1 || text.indexOf('nướng') !== -1 || text.indexOf('cừu') !== -1;
-          } else if (activeCategory.indexOf('dimsum') !== -1 || activeCategory.indexOf('sashimi') !== -1) {
-            matchCat = text.indexOf('sashimi') !== -1 || text.indexOf('há cảo') !== -1 || text.indexOf('dimsum') !== -1 || text.indexOf('xíu mại') !== -1 || text.indexOf('cá hồi') !== -1 || text.indexOf('bánh bao') !== -1;
-          } else if (activeCategory.indexOf('lẩu') !== -1 || activeCategory.indexOf('tráng miệng') !== -1) {
-            matchCat = text.indexOf('lẩu') !== -1 || text.indexOf('tomyum') !== -1 || text.indexOf('chè') !== -1 || text.indexOf('bánh') !== -1 || text.indexOf('kem') !== -1 || text.indexOf('trái cây') !== -1;
+          } else if (activeCategory.indexOf('dimsum') !== -1 || activeCategory.indexOf('sashimi') !== -1 || activeCategory.indexOf('sushi') !== -1 || activeCategory.indexOf('khai vị') !== -1) {
+            matchCat = text.indexOf('sashimi') !== -1 || text.indexOf('sushi') !== -1 || text.indexOf('há cảo') !== -1 || text.indexOf('dimsum') !== -1 || text.indexOf('xíu mại') !== -1 || text.indexOf('cá hồi') !== -1 || text.indexOf('bánh bao') !== -1 || text.indexOf('salad') !== -1 || text.indexOf('súp') !== -1;
+          } else if (activeCategory.indexOf('lẩu') !== -1 || activeCategory.indexOf('tráng miệng') !== -1 || activeCategory.indexOf('đồ uống') !== -1) {
+            matchCat = text.indexOf('lẩu') !== -1 || text.indexOf('tomyum') !== -1 || text.indexOf('chè') !== -1 || text.indexOf('bánh') !== -1 || text.indexOf('kem') !== -1 || text.indexOf('trái cây') !== -1 || text.indexOf('nước') !== -1;
           }
         }
         var matchTaste = true;
-        if (activeTaste === 'best' || activeTaste.indexOf('đầu bếp') !== -1) {
+        if (activeTaste === 'best' || activeTaste.indexOf('đầu bếp') !== -1 || activeTaste.indexOf('must') !== -1) {
           matchTaste = text.indexOf('cua') !== -1 || text.indexOf('tôm hùm') !== -1 || text.indexOf('wagyu') !== -1 || text.indexOf('sashimi') !== -1 || text.indexOf('bào ngư') !== -1;
         } else if (activeTaste === 'grill' || activeTaste.indexOf('nướng') !== -1) {
           matchTaste = text.indexOf('nướng') !== -1 || text.indexOf('đút lò') !== -1 || text.indexOf('áp chảo') !== -1;
-        } else if (activeTaste === 'steam' || activeTaste.indexOf('hấp') !== -1) {
-          matchTaste = text.indexOf('hấp') !== -1 || text.indexOf('lẩu') !== -1 || text.indexOf('sashimi') !== -1 || text.indexOf('bơi bể') !== -1;
+        } else if (activeTaste === 'steam' || activeTaste.indexOf('hấp') !== -1 || activeTaste.indexOf('không cay') !== -1) {
+          matchTaste = text.indexOf('ớt') === -1 && text.indexOf('tomyum') === -1 && text.indexOf('cay') === -1;
         } else if (activeTaste === 'spicy' || activeTaste.indexOf('cay') !== -1) {
           matchTaste = text.indexOf('ớt') !== -1 || text.indexOf('tiêu') !== -1 || text.indexOf('tomyum') !== -1 || text.indexOf('muối') !== -1 || text.indexOf('cay') !== -1;
         } else if (activeTaste === 'kids' || activeTaste.indexOf('trẻ em') !== -1) {
@@ -1052,29 +1271,41 @@
       }
     }
 
-    if (searchInp) {
-      var urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('q')) {
-        searchInp.value = urlParams.get('q');
-      }
-      searchInp.addEventListener('input', filterMenuCards);
-      if (searchInp.value) filterMenuCards();
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('q')) {
+      activeQuery = urlParams.get('q');
+      searchInputs.forEach(function (inp) { inp.value = activeQuery; });
     }
-
-    /* Clear search button on menu.html */
-    var clearSearchBtn = document.querySelector('[data-node-id="3375:241"]');
-    if (clearSearchBtn && searchInp) {
-      clearSearchBtn.style.cursor = 'pointer';
-      clearSearchBtn.addEventListener('click', function () {
-        searchInp.value = '';
-        activeCategory = 'all';
-        activeTaste = 'all';
+    searchInputs.forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        activeQuery = inp.value;
+        searchInputs.forEach(function (other) { if (other !== inp) other.value = activeQuery; });
         filterMenuCards();
       });
-    }
+    });
+    if (activeQuery) filterMenuCards();
 
-    /* Sticky Category Tabs on menu.html (3375:243) */
-    document.querySelectorAll('[data-node-id="3375:243"] > div, [data-name="Bộ lọc danh mục"] > div').forEach(function (tab) {
+    /* Clear / Reset filters button on menu.html & S13 empty state */
+    document.querySelectorAll('[data-node-id="3375:241"], #menu-empty-state-section [data-name*="Nút"]').forEach(function (clearBtn) {
+      clearBtn.setAttribute('data-oceania-handled', '1');
+      clearBtn.style.cursor = 'pointer';
+      clearBtn.addEventListener('click', function () {
+        activeQuery = '';
+        activeCategory = 'all';
+        activeTaste = 'all';
+        searchInputs.forEach(function (inp) { inp.value = ''; });
+        document.querySelectorAll('[data-node-id="3375:243"] > div, [data-name="Bộ lọc danh mục"] > div, [data-name="Thanh danh mục"] > div').forEach(function (sib, i) {
+          sib.style.backgroundColor = i === 0 ? '#07192f' : '#ffffff';
+          var sp = sib.querySelector('p');
+          if (sp) sp.style.color = i === 0 ? '#f8f9fa' : '#1e293b';
+        });
+        filterMenuCards();
+        showToast('Đã đặt lại toàn bộ bộ lọc thực đơn.');
+      });
+    });
+
+    /* Sticky Category Tabs on menu.html (Desktop + Tablet + Mobile) */
+    document.querySelectorAll('[data-node-id="3375:243"] > div, [data-name="Bộ lọc danh mục"] > div, [data-name="Thanh danh mục"] > div').forEach(function (tab) {
       tab.style.cursor = 'pointer';
       tab.addEventListener('click', function () {
         var txt = getText(tab).toLowerCase();
@@ -1096,8 +1327,8 @@
       });
     });
 
-    /* Native Figma Taste Pills (3375:258) */
-    document.querySelectorAll('[data-node-id="3375:258"] > div, [data-name="Bộ lọc khẩu vị"] > div').forEach(function (pill) {
+    /* Native Figma Taste Pills (Desktop 3375:258 + Tablet/Mobile) */
+    document.querySelectorAll('[data-node-id="3375:258"] > div, [data-name="Bộ lọc khẩu vị"] > div, [data-name="Khẩu vị"] > div').forEach(function (pill) {
       pill.style.cursor = 'pointer';
       pill.addEventListener('click', function () {
         var txt = getText(pill).toLowerCase();
@@ -1109,11 +1340,9 @@
         } else {
           activeTaste = txt;
           Array.from(pill.parentElement.children).forEach(function (sib) {
-            if (sib.getAttribute('data-name') === 'Bộ lọc') {
-              sib.style.backgroundColor = '#ffffff';
-              var sp = sib.querySelector('p');
-              if (sp) sp.style.color = '#1e293b';
-            }
+            sib.style.backgroundColor = '#ffffff';
+            var sp = sib.querySelector('p');
+            if (sp) sp.style.color = '#1e293b';
           });
           pill.style.backgroundColor = '#ff5a36';
           var pp = pill.querySelector('p');
@@ -1138,65 +1367,6 @@
     }
   }
 
-  function initDishDetailPage() {
-    var nutriBox = document.getElementById('oceania-nutrition-panel');
-    if (!nutriBox) return;
-
-    var params = new URLSearchParams(window.location.search);
-    var requestedDish = params.get('dish');
-    var record = findDishRecord(requestedDish || 'Tôm hùm bông nướng phô mai đút lò');
-
-    var mainHeroImg = document.querySelector('[data-node-id="3361:13764"] img');
-    if (mainHeroImg && record.image) {
-      mainHeroImg.src = record.image;
-    }
-
-    var titleNode = document.querySelector('[data-node-id="3361:13772"] p');
-    if (titleNode) {
-      titleNode.textContent = record.title;
-    }
-
-    var descNode = document.querySelector('[data-node-id="3361:13773"] p');
-    if (descNode) {
-      descNode.textContent = record.desc;
-    }
-
-    var stationNode = document.querySelector('[data-node-id="3361:13777"] p');
-    if (stationNode && record.station) {
-      stationNode.textContent = record.station;
-    }
-
-    var kcalEl = document.getElementById('nutri-kcal');
-    var proEl = document.getElementById('nutri-protein');
-    var fatEl = document.getElementById('nutri-fat');
-    var minEl = document.getElementById('nutri-minerals');
-    var algEl = document.getElementById('nutri-allergen');
-    var sauceEl = document.getElementById('nutri-sauce');
-
-    if (kcalEl) kcalEl.textContent = record.kcal;
-    if (proEl) proEl.textContent = record.protein;
-    if (fatEl) fatEl.textContent = record.fat;
-    if (minEl) minEl.textContent = record.minerals;
-    if (algEl) algEl.textContent = record.allergen;
-    if (sauceEl) sauceEl.textContent = record.sauce;
-
-    /* Interactive 4-Thumbnail Switcher */
-    var thumbWrap = document.getElementById('dish-macro-thumbs');
-    if (thumbWrap && mainHeroImg) {
-      var thumbs = thumbWrap.querySelectorAll('img');
-      thumbs.forEach(function (img, idx) {
-        if (record.gallery && record.gallery[idx]) {
-          img.src = record.gallery[idx];
-        }
-        img.addEventListener('click', function () {
-          mainHeroImg.src = img.src;
-          thumbs.forEach(function (t) { t.style.borderColor = '#e2e8f0'; });
-          img.style.borderColor = '#ff5a36';
-        });
-      });
-    }
-  }
-
   /* ==========================================================================
      8. PRICING PAGE (pricing.html): INTERACTIVE COST CALCULATOR
      ========================================================================== */
@@ -1212,15 +1382,15 @@
       babies: 1
     };
 
-    var adultCountEl = document.querySelector('[data-node-id="3361:12971"] p');
-    var kidCountEl = document.querySelector('[data-node-id="3361:12979"] p');
-    var babyCountEl = document.querySelector('[data-node-id="3361:12987"] p');
+    var adultCountEl = document.querySelector('[data-node-id="3361:12971"]');
+    var kidCountEl = document.querySelector('[data-node-id="3361:12979"]');
+    var babyCountEl = document.querySelector('[data-node-id="3361:12987"]');
 
     function getUnitPrice() {
       var shiftTxt = shiftSel ? shiftSel.value : '';
       var dayTxt = daySel ? daySel.value : '';
       if (shiftTxt.indexOf('569') !== -1) return 569000;
-      if (shiftTxt.indexOf('369') !== -1 || (shiftTxt.indexOf('Trưa') !== -1 && dayTxt.indexOf('Thứ 2') !== -1)) return 369000;
+      if (shiftTxt.indexOf('369') !== -1 || (shiftTxt.indexOf('Trưa') !== -1 && dayTxt.indexOf('weekday') !== -1)) return 369000;
       return 469000;
     }
 
@@ -1238,20 +1408,25 @@
       if (kidCountEl) kidCountEl.textContent = String(calcState.kids);
       if (babyCountEl) babyCountEl.textContent = String(calcState.babies);
 
-      var r1Label = document.querySelector('[data-node-id="3361:12993"] p');
-      var r1Val = document.querySelector('[data-node-id="3361:12994"] p');
+      var r1Label = document.querySelector('[data-node-id="3361:12995"]');
+      var r1Val = document.querySelector('[data-node-id="3361:12996"]');
       if (r1Label) r1Label.textContent = calcState.adults + ' Người lớn × ' + fmtVnd(unit);
       if (r1Val) r1Val.textContent = fmtVnd(adultSub);
 
-      var r2Label = document.querySelector('[data-node-id="3361:12996"] p');
-      var r2Val = document.querySelector('[data-node-id="3361:12997"] p');
+      var r2Label = document.querySelector('[data-node-id="3361:12998"]');
+      var r2Val = document.querySelector('[data-node-id="3361:12999"]');
       if (r2Label) r2Label.textContent = calcState.kids + ' Trẻ em (1m–1.3m) × ' + fmtVnd(kidUnit);
       if (r2Val) r2Val.textContent = fmtVnd(kidSub);
 
-      var vatVal = document.querySelector('[data-node-id="3361:13000"] p');
-      if (vatVal) vatVal.textContent = fmtVnd(vat);
+      var r3Val = document.querySelector('[data-node-id="3361:13002"]');
+      if (r3Val) r3Val.textContent = calcState.babies + ' bé · Miễn phí';
 
-      var totalVal = document.querySelector('[data-node-id="3361:13005"] p');
+      var r4Label = document.querySelector('[data-node-id="3375:208"]');
+      var r4Val = document.querySelector('[data-node-id="3375:209"]');
+      if (r4Label) r4Label.textContent = discount > 0 ? 'VAT (8%) · Đã trừ ưu đãi Đi 10 Tặng 1' : 'Thuế VAT (8%)';
+      if (r4Val) r4Val.textContent = fmtVnd(vat);
+
+      var totalVal = document.querySelector('[data-node-id="3361:13005"]');
       if (totalVal) totalVal.textContent = fmtVnd(grandTotal);
     }
 
@@ -1282,6 +1457,24 @@
     if (daySel) daySel.addEventListener('change', updatePricingCalculator);
     if (shiftSel) shiftSel.addEventListener('change', updatePricingCalculator);
     updatePricingCalculator();
+
+    /* Tier Cards & Calculator CTA buttons -> booking.html with selected tier & guest counts */
+    document.querySelectorAll('[data-name*="Action"], [data-name*="Nút"]').forEach(function (cta) {
+      var txt = getText(cta).toLowerCase();
+      if (txt.indexOf('đặt bàn') !== -1 || txt.indexOf('chọn gói') !== -1) {
+        cta.setAttribute('data-oceania-handled', '1');
+        cta.style.cursor = 'pointer';
+        cta.addEventListener('click', function (e) {
+          e.preventDefault();
+          var cardTxt = getText(cta.closest('[data-node-id]') || cta).toLowerCase();
+          var tier = shiftSel ? shiftSel.value : '469000';
+          if (cardTxt.indexOf('369') !== -1 || cardTxt.indexOf('trưa') !== -1) tier = '369000';
+          else if (cardTxt.indexOf('569') !== -1 || cardTxt.indexOf('vip') !== -1) tier = '569000';
+          else if (cardTxt.indexOf('469') !== -1 || cardTxt.indexOf('tối') !== -1) tier = '469000';
+          window.location.href = 'booking.html?tier=' + encodeURIComponent(tier) + '&guests=' + encodeURIComponent(calcState.adults + calcState.kids);
+        });
+      }
+    });
   }
 
   /* ==========================================================================
@@ -1306,16 +1499,31 @@
     }
 
     var flashBtn = document.getElementById('oceania-claim-flash-btn');
+    var activePromo = { code: 'OCN-10TANG1', title: 'ĐI 10 TẶNG 1 · NHÓM ĐOÀN', desc: 'Áp dụng cho đoàn từ 10 người lớn trở lên tại toàn hệ thống TP.HCM.' };
+
+    function openPromoModalWith(code, title, desc) {
+      activePromo = { code: code, title: title, desc: desc };
+      var m = document.getElementById('modal-s14');
+      if (m) {
+        var codeNode = m.querySelector('[data-node-id="3375:39238"] p, [data-node-id="3375:39239"]');
+        if (codeNode) codeNode.textContent = code;
+        var tNode = m.querySelector('[data-node-id="3375:39228"]');
+        if (tNode) tNode.textContent = title;
+      }
+      openModal('modal-s14');
+    }
+
     if (flashBtn) {
       flashBtn.addEventListener('click', function () {
-        openModal('modal-s14');
+        openPromoModalWith('OCN-FLASH20', 'FLASHSALE · GIẢM NGAY 20% VÉ TỐI', 'Số lượng giới hạn trong khung giờ vàng hôm nay tại Q.1, Q.7 và Thủ Đức.');
       });
     }
 
-    /* Filter Promo Cards on promotions.html (3361:13145) */
-    var promoFilterWrap = document.querySelector('[data-node-id="3361:13145"]');
-    var promoCards = document.querySelectorAll('.oceania-desktop-view [data-name="Thẻ ưu đãi"]');
-    if (promoFilterWrap && promoCards.length > 0) {
+    /* Filter Promo Cards on promotions.html (Desktop + Tablet + Mobile) */
+    document.querySelectorAll('[data-node-id="3361:13145"], .oceania-tablet-view [data-name="Thanh lọc"], .oceania-mobile-view [data-name="Thanh lọc"]').forEach(function (promoFilterWrap) {
+      var scope = promoFilterWrap.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+      var promoCards = scope.querySelectorAll('[data-name="Thẻ ưu đãi"]');
+      if (promoCards.length === 0) return;
       Array.from(promoFilterWrap.children).forEach(function (pill) {
         pill.style.cursor = 'pointer';
         pill.addEventListener('click', function () {
@@ -1339,14 +1547,22 @@
           });
         });
       });
-    }
+    });
 
-    /* Open S14 Promo Modal when clicking "Nhận mã ưu đãi" on promo cards */
-    document.querySelectorAll('[data-name="Nút nhận ưu đãi"]').forEach(function (btn) {
+    /* Open S14 Promo Modal with context-aware code when clicking promo cards */
+    document.querySelectorAll('[data-name="Nút nhận ưu đãi"], [data-name="Thẻ ưu đãi"] [data-name="Nút hành động"]').forEach(function (btn) {
       btn.setAttribute('data-oceania-handled', '1');
+      btn.style.cursor = 'pointer';
       btn.addEventListener('click', function (e) {
         e.preventDefault();
-        openModal('modal-s14');
+        var cardTxt = getText(btn.closest('[data-name="Thẻ ưu đãi"]') || btn).toLowerCase();
+        if (cardTxt.indexOf('sinh nhật') !== -1) {
+          openPromoModalWith('OCN-BIRTHDAY', 'TIỆC SINH NHẬT · TẶNG BÁNH KEM & DECOR', 'Tặng miễn phí bánh kem lạnh Pháp + set trang trí bàn VIP cho đoàn từ 6 khách.');
+        } else if (cardTxt.indexOf('club') !== -1 || cardTxt.indexOf('thành viên') !== -1 || cardTxt.indexOf('trưa') !== -1) {
+          openPromoModalWith('OCN-CLUB20', 'THỨ 3 OCEANIA CLUB · ƯU ĐÃI HỘI VIÊN', 'Giảm 15% trực tiếp tổng hóa đơn cho thẻ thành viên Bạc, Vàng, Kim Cương.');
+        } else {
+          openPromoModalWith('OCN-10TANG1', 'ĐI 10 TẶNG 1 · ĐOÀN ĐÔNG TIẾT KIỆM', 'Áp dụng cho nhóm từ 10 người lớn khi đặt bàn trước qua hệ thống Oceania.');
+        }
       });
     });
 
@@ -1358,24 +1574,25 @@
         if (!btn) return;
         var txt = getText(btn);
         if (txt.indexOf('Sao chép') !== -1) {
-          if (navigator.clipboard) navigator.clipboard.writeText('OCN-10TANG1');
-          showToast('Đã sao chép mã ưu đãi OCN-10TANG1 vào bộ nhớ tạm!');
+          if (navigator.clipboard) navigator.clipboard.writeText(activePromo.code);
+          showToast('Đã sao chép mã ưu đãi ' + activePromo.code + ' vào bộ nhớ tạm!');
         } else if (txt.indexOf('Áp dụng') !== -1 || txt.indexOf('Đặt bàn') !== -1) {
-          window.location.href = 'booking.html?promo=OCN-10TANG1';
+          window.location.href = 'booking.html?promo=' + encodeURIComponent(activePromo.code);
         } else if (txt.indexOf('Đóng') !== -1) {
           closeModal('modal-s14');
         }
       });
     }
 
-    /* Group Party Form Submission (3361:13249) -> S15 */
-    var partyBtn = document.querySelector('[data-node-id="3361:13249"]');
-    if (partyBtn) {
+    /* Group Party Form Submission (Desktop + Tablet + Mobile) -> S15 */
+    document.querySelectorAll('[data-node-id="3361:13249"], .oceania-tablet-view [data-name="Biểu mẫu tiệc"] [data-name="Nút hành động"], .oceania-mobile-view [data-name="Biểu mẫu tiệc"] [data-name="Nút hành động"]').forEach(function (partyBtn) {
       partyBtn.setAttribute('data-oceania-handled', '1');
+      partyBtn.style.cursor = 'pointer';
       partyBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        var nameInp = document.getElementById('promo-party-name');
-        var phoneInp = document.getElementById('promo-party-phone');
+        var scope = partyBtn.closest('section, [data-node-id]') || document;
+        var nameInp = scope.querySelector('[data-oceania-field="promo-name"]') || document.getElementById('promo-party-name');
+        var phoneInp = scope.querySelector('[data-oceania-field="promo-phone"]') || document.getElementById('promo-party-phone');
         var nameVal = nameInp ? nameInp.value.trim() : '';
         var phoneVal = phoneInp ? phoneInp.value.trim().replace(/\s+/g, '') : '';
         if (!nameVal || !/^0\d{9}$/.test(phoneVal)) {
@@ -1389,28 +1606,32 @@
         }
         showToast('Đã gửi yêu cầu đặt tiệc đoàn! Quản lý sự kiện Oceania sẽ liên hệ trong 15 phút.');
       });
-    }
+    });
   }
 
   /* ==========================================================================
      10. BLOG (blog.html) & POST DETAIL (post-detail.html)
      ========================================================================== */
   function initBlogAndPostDetail() {
-    var blogSearch = document.getElementById('blog-search-input');
-    var blogFilterWrap = document.querySelector('[data-node-id="3361:13380"]');
-    var blogCards = document.querySelectorAll('.oceania-desktop-view [data-name="Bài viết"]');
+    var blogSearches = document.querySelectorAll('#blog-search-input, [data-oceania-field="blog-search"]');
+    var blogCards = document.querySelectorAll('.oceania-desktop-view [data-name="Bài viết"], .oceania-tablet-view [data-name="Bài viết"], .oceania-mobile-view [data-name="Bài viết"]');
 
-    if (blogSearch && blogCards.length > 0) {
-      blogSearch.addEventListener('input', function () {
-        var q = blogSearch.value.trim().toLowerCase();
+    blogSearches.forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var q = inp.value.trim().toLowerCase();
+        blogSearches.forEach(function (other) { if (other !== inp) other.value = inp.value; });
         blogCards.forEach(function (card) {
           var t = getText(card).toLowerCase();
           card.style.display = (!q || t.indexOf(q) !== -1) ? '' : 'none';
         });
       });
-    }
+    });
 
-    if (blogFilterWrap && blogCards.length > 0) {
+    document.querySelectorAll('[data-node-id="3361:13380"], .oceania-tablet-view [data-name="Bộ lọc"], .oceania-mobile-view [data-name="Bộ lọc"]').forEach(function (blogFilterWrap) {
+      if (blogFilterWrap.parentElement && blogFilterWrap.children.length < 2) return;
+      var scope = blogFilterWrap.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+      var scopedCards = scope.querySelectorAll('[data-name="Bài viết"]');
+      if (scopedCards.length === 0) return;
       Array.from(blogFilterWrap.children).forEach(function (pill) {
         pill.style.cursor = 'pointer';
         pill.addEventListener('click', function () {
@@ -1424,34 +1645,35 @@
           var pp = pill.querySelector('p');
           if (pp) pp.style.color = '#f8f9fa';
 
-          blogCards.forEach(function (card) {
+          scopedCards.forEach(function (card) {
             var t = getText(card).toLowerCase();
             var show = cat.indexOf('tất cả') !== -1 || t.indexOf(cat.slice(0, 6)) !== -1;
             card.style.display = show ? '' : 'none';
           });
         });
       });
-    }
+    });
 
-    /* Post Detail Dynamic Title from ?post=... */
+    /* Post Detail Dynamic Title & Share buttons from ?post=... */
     var params = new URLSearchParams(window.location.search);
     var postParam = params.get('post');
     if (postParam) {
-      var h1Node = document.querySelector('[data-node-id="3361:13556"] p');
+      var h1Node = document.querySelector('[data-node-id="3361:13556"] p, [data-name="Tiêu đề bài"] p');
       if (h1Node) h1Node.textContent = postParam;
     }
 
-    /* Post Detail Live Comment Submission (3361:13648) */
-    var submitCommentBtn = document.querySelector('[data-node-id="3361:13648"]');
-    var commentInp = document.getElementById('post-comment-text');
-    var commentName = document.getElementById('post-comment-name');
-    var commentList = document.getElementById('post-comments-section');
-    if (submitCommentBtn && commentInp) {
+    /* Post Detail Live Comment Submission (Desktop + Tablet + Mobile) */
+    document.querySelectorAll('[data-node-id="3361:13648"], .oceania-tablet-view [data-name="Biểu mẫu bình luận"] [data-name="Nút hành động"], .oceania-mobile-view [data-name="Biểu mẫu bình luận"] [data-name="Nút hành động"]').forEach(function (submitCommentBtn) {
       submitCommentBtn.setAttribute('data-oceania-handled', '1');
+      submitCommentBtn.style.cursor = 'pointer';
       submitCommentBtn.addEventListener('click', function (e) {
         e.preventDefault();
+        var scope = submitCommentBtn.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+        var commentInp = scope.querySelector('[data-oceania-field="post-comment-text"]') || document.getElementById('post-comment-text');
+        var commentName = scope.querySelector('[data-oceania-field="post-comment-name"]') || document.getElementById('post-comment-name');
+        var commentList = document.getElementById('post-comments-section');
         var author = commentName && commentName.value.trim() ? commentName.value.trim() : 'Thực khách Oceania';
-        var content = commentInp.value.trim();
+        var content = commentInp ? commentInp.value.trim() : '';
         if (!content) {
           showToast('Vui lòng nhập nội dung bình luận chia sẻ trải nghiệm của bạn.');
           return;
@@ -1467,10 +1689,10 @@
         if (commentList) {
           commentList.insertBefore(newComment, commentList.firstChild);
         }
-        commentInp.value = '';
+        if (commentInp) commentInp.value = '';
         showToast('Cảm ơn bạn! Bình luận của bạn đã được đăng lên Cẩm nang Ẩm thực.');
       });
-    }
+    });
   }
 
   /* ==========================================================================
@@ -1497,41 +1719,115 @@
       });
     });
 
-    /* Contact Form Validation (S19) & Success (S20) */
-    var sendBtn = document.querySelector('#contact-pane-default [data-node-id="3361:14267"]');
-    if (sendBtn) {
+    /* Contact Form Validation (S19) & Success (S20) across Desktop/Tablet/Mobile */
+    document.querySelectorAll('#contact-pane-default [data-node-id="3361:14267"], .oceania-tablet-view [data-name="Biểu mẫu"] [data-name="Nút hành động"], .oceania-mobile-view [data-name="Biểu mẫu"] [data-name="Nút hành động"]').forEach(function (sendBtn) {
       sendBtn.setAttribute('data-oceania-handled', '1');
+      sendBtn.style.cursor = 'pointer';
       sendBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        var nameInp = document.getElementById('contact-name');
-        var phoneInp = document.getElementById('contact-phone');
-        var msgInp = document.getElementById('contact-message');
+        var scope = sendBtn.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+        var nameInp = scope.querySelector('[data-oceania-field="contact-name"]') || document.getElementById('contact-name');
+        var phoneInp = scope.querySelector('[data-oceania-field="contact-phone"]') || document.getElementById('contact-phone');
+        var msgInp = scope.querySelector('[data-oceania-field="contact-message"]') || document.getElementById('contact-message');
         var nameVal = nameInp ? nameInp.value.trim() : '';
         var phoneVal = phoneInp ? phoneInp.value.trim().replace(/\s+/g, '') : '';
         var msgVal = msgInp ? msgInp.value.trim() : '';
 
-        if (!nameVal || !/^0\d{9}$/.test(phoneVal) || !msgVal) {
-          showToast('Vui lòng điền đầy đủ Họ tên, SĐT 10 số hợp lệ và Nội dung liên hệ.');
+        var isPhoneOrEmail = /^0\d{9}$/.test(phoneVal) || phoneVal.indexOf('@') !== -1;
+        if (!nameVal || !isPhoneOrEmail || !msgVal) {
+          showToast('Vui lòng điền đầy đủ Họ tên, SĐT 10 số (hoặc Email) và Nội dung liên hệ.');
           return;
         }
         document.querySelectorAll('.oceania-contact-pane').forEach(function (p) {
           p.classList.remove('active');
         });
         var s20 = document.getElementById('contact-pane-success');
-        if (s20) s20.classList.add('active');
+        if (s20) {
+          s20.classList.add('active');
+          s20.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         showToast('Đã gửi thông tin liên hệ tới Ban Quản Lý Oceania TP.HCM!');
+      });
+    });
+
+    var errPane = document.getElementById('contact-pane-error');
+    if (errPane) {
+      errPane.addEventListener('click', function (e) {
+        if (e.target.closest('[data-name*="Nút"]')) {
+          document.querySelectorAll('.oceania-contact-pane').forEach(function (p) { p.classList.remove('active'); });
+          var def = document.getElementById('contact-pane-default');
+          if (def) def.classList.add('active');
+        }
       });
     }
   }
 
   /* ==========================================================================
-     12. REVIEWS & VIP PAGE (reviews.html): FILTER, VERIFY BOOKING & POST REVIEW
+     12. REVIEWS & VIP PAGE (reviews.html): FILTER, CLUB MODAL, S17 & POST REVIEW
      ========================================================================== */
   function initReviewsPage() {
-    /* Review Category Filter (3361:14501) */
-    var revFilterWrap = document.querySelector('[data-node-id="3361:14501"]');
-    var revCards = document.querySelectorAll('.oceania-desktop-view [data-name="Thẻ đánh giá"]');
-    if (revFilterWrap && revCards.length > 0) {
+    var selectedStars = 5;
+    var starPicker = document.getElementById('review-star-picker');
+    var starLabel = document.getElementById('review-star-label');
+    var starLabels = { 1: '1/5 · Cần cải thiện', 2: '2/5 · Chưa hài lòng', 3: '3/5 · Khá ổn', 4: '4/5 · Hài lòng', 5: '5/5 · Tuyệt vời' };
+
+    if (starPicker) {
+      starPicker.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-star]');
+        if (!btn) return;
+        selectedStars = parseInt(btn.getAttribute('data-star'), 10) || 5;
+        starPicker.querySelectorAll('[data-star]').forEach(function (sBtn) {
+          var v = parseInt(sBtn.getAttribute('data-star'), 10);
+          sBtn.classList.toggle('active', v <= selectedStars);
+        });
+        if (starLabel) starLabel.textContent = starLabels[selectedStars] || '5/5 · Tuyệt vời';
+      });
+    }
+
+    var photoInp = document.getElementById('review-modal-photo');
+    var photoName = document.getElementById('review-modal-file-name');
+    if (photoInp && photoName) {
+      photoInp.addEventListener('change', function () {
+        if (photoInp.files && photoInp.files[0]) {
+          photoName.textContent = photoInp.files[0].name + ' · Đã chọn đính kèm ✓';
+        }
+      });
+    }
+
+    /* Oceania Club Check & Signup Modal */
+    var clubCheckBtn = document.getElementById('club-check-btn');
+    var clubResult = document.getElementById('club-check-result');
+    var clubPhone = document.getElementById('club-member-phone');
+    if (clubCheckBtn && clubResult) {
+      clubCheckBtn.addEventListener('click', function () {
+        var p = clubPhone ? clubPhone.value.trim().replace(/\s+/g, '') : '';
+        if (!/^0\d{9}$/.test(p)) {
+          showToast('Vui lòng nhập số điện thoại 10 số hợp lệ để tra cứu thẻ Oceania Club.');
+          return;
+        }
+        clubResult.style.display = 'block';
+        clubResult.innerHTML = '✓ Thẻ Hạng <strong>VÀNG (Gold Member)</strong> · Số ĐT: ' + p + ' · Điểm tích lũy: <strong>1.450 điểm</strong> (Giảm 10% hóa đơn & Ưu tiên bàn view bể hải sản).';
+        showToast('Tra cứu thẻ Oceania Club thành công!');
+      });
+    }
+
+    document.querySelectorAll('[data-name*="Nút"], [data-name*="Action"]').forEach(function (btn) {
+      var txt = getText(btn).toLowerCase();
+      if (txt.indexOf('đăng ký thẻ') !== -1 || txt.indexOf('gia nhập oceania club') !== -1 || txt.indexOf('kiểm tra hạng thẻ') !== -1) {
+        btn.setAttribute('data-oceania-handled', '1');
+        btn.style.cursor = 'pointer';
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          openModal('oceania-club-modal');
+        });
+      }
+    });
+
+    /* Review Category Filter (Desktop + Tablet + Mobile) */
+    document.querySelectorAll('[data-node-id="3361:14501"], .oceania-tablet-view [data-name="Thanh lọc"], .oceania-mobile-view [data-name="Thanh lọc"]').forEach(function (revFilterWrap) {
+      var scope = revFilterWrap.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+      var revCards = scope.querySelectorAll('[data-name="Thẻ đánh giá"]');
+      if (revCards.length === 0) return;
       Array.from(revFilterWrap.children).forEach(function (pill) {
         pill.style.cursor = 'pointer';
         pill.addEventListener('click', function () {
@@ -1552,15 +1848,16 @@
           });
         });
       });
-    }
+    });
 
-    /* Verify Booking Code (3361:14594) -> Open S17 Write Review Modal or S16 Error */
-    var verifyBtn = document.querySelector('#review-pane-default [data-node-id="3361:14594"]');
-    if (verifyBtn) {
+    /* Verify Booking Code (Desktop + Tablet + Mobile) -> S17 Modal or S16 Error */
+    document.querySelectorAll('#review-pane-default [data-node-id="3361:14594"], .oceania-tablet-view [data-name="Xác thực đánh giá"] [data-name="Nút hành động"], .oceania-mobile-view [data-name="Xác thực đánh giá"] [data-name="Nút hành động"]').forEach(function (verifyBtn) {
       verifyBtn.setAttribute('data-oceania-handled', '1');
+      verifyBtn.style.cursor = 'pointer';
       verifyBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        var codeInp = document.getElementById('review-booking-code');
+        var scope = verifyBtn.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+        var codeInp = scope.querySelector('[data-oceania-field="review-code"]') || document.getElementById('review-booking-code');
         var val = codeInp ? codeInp.value.trim().toUpperCase() : '';
         if (!val || (val.indexOf('OCN-') === -1 && !/^0\d{9}$/.test(val))) {
           document.querySelectorAll('.oceania-review-pane').forEach(function (p) { p.classList.remove('active'); });
@@ -1572,7 +1869,7 @@
         openModal('modal-s17');
         showToast('Xác thực mã đặt bàn ' + val + ' thành công! Mời bạn chia sẻ đánh giá.');
       });
-    }
+    });
 
     /* Retry inside S16 Failed Pane */
     var failedPaneEl = document.getElementById('review-pane-failed');
@@ -1592,38 +1889,73 @@
       });
     }
 
-    /* Submit Review inside Default Pane (3361:14608) or Modal S17 (3375:39304) -> S18 */
+    /* Submit Review inside Default Pane or Modal S17 -> Live append + S18 */
     document.querySelectorAll('[data-node-id="3361:14608"], #modal-s17 [data-node-id="3375:39304"]').forEach(function (btn) {
       btn.setAttribute('data-oceania-handled', '1');
       btn.addEventListener('click', function (e) {
         e.preventDefault();
+        var textInp = document.getElementById('review-modal-text');
+        var revBody = textInp && textInp.value.trim() ? textInp.value.trim() : 'Hải sản tươi sống, phục vụ rất tận tâm và chuyên nghiệp!';
+        var starsStr = '';
+        for (var k = 0; k < selectedStars; k++) starsStr += '★';
+        var feedContainer = document.querySelector('[data-node-id="3361:14510"]') || document.querySelector('[data-name="Danh sách đánh giá"]');
+        if (feedContainer) {
+          var newCard = document.createElement('div');
+          newCard.className = 'bg-white border border-[#d4af37] p-[24px] rounded-[4px] mb-[16px] w-full';
+          newCard.setAttribute('data-name', 'Thẻ đánh giá');
+          newCard.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<strong style="font-size:15px;color:#07192f;">Nguyễn Minh Anh · <span style="color:#059669;font-size:12px;">✓ Đã xác thực OCN</span></strong>' +
+            '<span style="color:#d4af37;font-size:16px;">' + starsStr + '</span>' +
+            '</div>' +
+            '<p style="font-size:14px;color:#1e293b;line-height:1.6;">' + revBody.replace(/</g, '&lt;') + '</p>';
+          feedContainer.insertBefore(newCard, feedContainer.firstChild);
+        }
         closeModal('modal-s17');
         document.querySelectorAll('.oceania-review-pane').forEach(function (p) {
           p.classList.remove('active');
         });
         var s18 = document.getElementById('review-pane-submitted');
         if (s18) s18.classList.add('active');
-        showToast('Cảm ơn đánh giá 5 sao của bạn! +100 điểm thưởng Oceania Club đã được cộng.');
+        showToast('Cảm ơn đánh giá ' + selectedStars + ' sao của bạn! +100 điểm thưởng Oceania Club đã được cộng.');
       });
     });
   }
 
   /* ==========================================================================
-     13. CAREERS PAGE (careers.html): JOB FILTERS, JD ACCORDION & ONLINE CV FORM (S26)
+     13. CAREERS PAGE (careers.html): COMBINED JOB FILTERS & ONLINE CV FORM (S26)
      ========================================================================== */
   function initCareersPage() {
     var deptWrap = document.querySelector('[data-node-id="3483:86"]');
     var branchWrap = document.querySelector('[data-node-id="3483:95"]');
     var jobListWrap = document.querySelector('[data-node-id="3483:118"]');
-    if (!deptWrap && !jobListWrap) return;
+    var allJobs = document.querySelectorAll('[data-node-id="3483:118"] > div, .oceania-tablet-view [data-name="Tin tuyển dụng"], .oceania-mobile-view [data-name="Tin tuyển dụng"]');
+    if (!deptWrap && allJobs.length === 0 && !document.querySelector('[data-oceania-field="cv-name"]')) return;
 
-    var jobCards = jobListWrap ? Array.from(jobListWrap.children) : [];
+    var jobCards = jobListWrap ? Array.from(jobListWrap.children) : Array.from(allJobs);
+    var activeDept = 'tất cả';
+    var activeBranch = 'tất cả';
 
-    if (deptWrap && jobCards.length > 0) {
+    function applyCareersFilter() {
+      jobCards.forEach(function (card) {
+        var t = getText(card).toLowerCase();
+        var matchDept = activeDept.indexOf('tất cả') !== -1 ||
+          (activeDept.indexOf('bếp') !== -1 && t.indexOf('bếp') !== -1) ||
+          (activeDept.indexOf('sảnh') !== -1 && (t.indexOf('sảnh') !== -1 || t.indexOf('phục vụ') !== -1 || t.indexOf('lễ tân') !== -1)) ||
+          (activeDept.indexOf('quản lý') !== -1 && (t.indexOf('giám sát') !== -1 || t.indexOf('quản lý') !== -1 || t.indexOf('trưởng') !== -1));
+        var matchBranch = activeBranch.indexOf('tất cả') !== -1 || t.indexOf('toàn hệ thống') !== -1 ||
+          (activeBranch.indexOf('vincom') !== -1 && t.indexOf('vincom') !== -1) ||
+          (activeBranch.indexOf('lotte') !== -1 && t.indexOf('lotte') !== -1) ||
+          (activeBranch.indexOf('cantavil') !== -1 && t.indexOf('cantavil') !== -1);
+        card.style.display = (matchDept && matchBranch) ? '' : 'none';
+      });
+    }
+
+    if (deptWrap) {
       Array.from(deptWrap.children).forEach(function (pill) {
         pill.style.cursor = 'pointer';
         pill.addEventListener('click', function () {
-          var cat = getText(pill).toLowerCase();
+          activeDept = getText(pill).toLowerCase();
           Array.from(deptWrap.children).forEach(function (sib) {
             sib.style.backgroundColor = '#ffffff';
             var sp = sib.querySelector('p');
@@ -1632,24 +1964,16 @@
           pill.style.backgroundColor = '#07192f';
           var pp = pill.querySelector('p');
           if (pp) pp.style.color = '#f8f9fa';
-
-          jobCards.forEach(function (card) {
-            var t = getText(card).toLowerCase();
-            var show = cat.indexOf('tất cả') !== -1 ||
-              (cat.indexOf('bếp') !== -1 && t.indexOf('bếp') !== -1) ||
-              (cat.indexOf('sảnh') !== -1 && (t.indexOf('sảnh') !== -1 || t.indexOf('phục vụ') !== -1 || t.indexOf('lễ tân') !== -1)) ||
-              (cat.indexOf('quản lý') !== -1 && (t.indexOf('giám sát') !== -1 || t.indexOf('quản lý') !== -1 || t.indexOf('trưởng') !== -1));
-            card.style.display = show ? '' : 'none';
-          });
+          applyCareersFilter();
         });
       });
     }
 
-    if (branchWrap && jobCards.length > 0) {
+    if (branchWrap) {
       Array.from(branchWrap.children).forEach(function (pill) {
         pill.style.cursor = 'pointer';
         pill.addEventListener('click', function () {
-          var loc = getText(pill).toLowerCase();
+          activeBranch = getText(pill).toLowerCase();
           Array.from(branchWrap.children).forEach(function (sib) {
             sib.style.backgroundColor = '#ffffff';
             var sp = sib.querySelector('p');
@@ -1658,26 +1982,20 @@
           pill.style.backgroundColor = '#ff5a36';
           var pp = pill.querySelector('p');
           if (pp) pp.style.color = '#ffffff';
-
-          jobCards.forEach(function (card) {
-            var t = getText(card).toLowerCase();
-            var show = loc.indexOf('tất cả') !== -1 || t.indexOf('toàn hệ thống') !== -1 ||
-              (loc.indexOf('vincom') !== -1 && t.indexOf('vincom') !== -1) ||
-              (loc.indexOf('lotte') !== -1 && t.indexOf('lotte') !== -1) ||
-              (loc.indexOf('cantavil') !== -1 && t.indexOf('cantavil') !== -1);
-            card.style.display = show ? '' : 'none';
-          });
+          applyCareersFilter();
         });
       });
     }
 
-    /* Click "Ứng tuyển ngay" on job cards -> pre-fill #cv-role and scroll to CV form */
+    /* Click "Ứng tuyển ngay" on job cards -> pre-fill role select & scroll to CV form */
     document.querySelectorAll('[data-name="Nút ứng tuyển"]').forEach(function (btn) {
       btn.setAttribute('data-oceania-handled', '1');
+      btn.style.cursor = 'pointer';
       btn.addEventListener('click', function (e) {
         e.preventDefault();
+        var scope = btn.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
         var card = btn.closest('[data-node-id]');
-        var roleSel = document.getElementById('cv-role');
+        var roleSel = scope.querySelector('[data-oceania-field="cv-role"]') || document.getElementById('cv-role');
         if (card && roleSel) {
           var cardTxt = getText(card);
           Array.from(roleSel.options).forEach(function (opt) {
@@ -1686,20 +2004,21 @@
             }
           });
         }
-        var formSec = document.querySelector('[data-node-id="3483:222"]');
+        var formSec = scope.querySelector('[data-node-id="3483:222"], [data-name="Form ứng tuyển"]') || document.querySelector('[data-node-id="3483:222"]');
         if (formSec) formSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
         showToast('Đã chọn vị trí ứng tuyển. Vui lòng điền thông tin hồ sơ bên dưới.');
       });
     });
 
-    /* Online CV Form Submit (3483:271) -> S26 */
-    var submitCvBtn = document.querySelector('[data-node-id="3483:271"]');
-    if (submitCvBtn) {
+    /* Online CV Form Submit (Desktop 3483:271 + Tablet/Mobile) -> S26 */
+    document.querySelectorAll('[data-node-id="3483:271"], .oceania-tablet-view [data-name="Form ứng tuyển"] [data-name="Nút hành động"], .oceania-mobile-view [data-name="Form ứng tuyển"] [data-name="Nút hành động"]').forEach(function (submitCvBtn) {
       submitCvBtn.setAttribute('data-oceania-handled', '1');
+      submitCvBtn.style.cursor = 'pointer';
       submitCvBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        var nameInp = document.getElementById('cv-name');
-        var phoneInp = document.getElementById('cv-phone');
+        var scope = submitCvBtn.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+        var nameInp = scope.querySelector('[data-oceania-field="cv-name"]') || document.getElementById('cv-name');
+        var phoneInp = scope.querySelector('[data-oceania-field="cv-phone"]') || document.getElementById('cv-phone');
         var nameVal = nameInp ? nameInp.value.trim() : '';
         var phoneVal = phoneInp ? phoneInp.value.trim().replace(/\s+/g, '') : '';
         if (!nameVal || !/^0\d{9}$/.test(phoneVal)) {
@@ -1713,7 +2032,7 @@
         }
         showToast('Nộp hồ sơ ứng tuyển thành công! Mã hồ sơ: HR-OCN-2610-08');
       });
-    }
+    });
   }
 
   /* ==========================================================================
@@ -1721,12 +2040,19 @@
      ========================================================================== */
   function initFaqAccordions() {
     document.querySelectorAll('[data-name="Câu hỏi"]').forEach(function (faqCard) {
+      faqCard.style.cursor = 'pointer';
       faqCard.addEventListener('click', function () {
         var ps = faqCard.querySelectorAll('p');
         if (ps.length >= 2) {
           var ans = ps[ps.length - 1];
           var isHidden = ans.style.display === 'none';
           ans.style.display = isHidden ? '' : 'none';
+          ps.forEach(function (p) {
+            var txt = getText(p);
+            if (txt === '+' || txt === '−' || txt === '-') {
+              p.textContent = isHidden ? '−' : '+';
+            }
+          });
         }
       });
     });
@@ -1741,8 +2067,8 @@
     initGlobalSearchAutocomplete();
     initGlobalClickRouter();
     initHomepage();
+    initLightboxGallery();
     initMenuPage();
-    initDishDetailPage();
     initPricingPage();
     initPromotionsPage();
     initBlogAndPostDetail();
