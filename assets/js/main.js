@@ -150,40 +150,378 @@
     return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + 'đ';
   }
 
-  /* Deterministic SVG QR Code Generator */
-  function buildSvgQrCode(codeStr) {
-    var seed = 0;
-    var s = String(codeStr || 'OCN-311026-001');
-    for (var i = 0; i < s.length; i++) {
-      seed = (seed * 31 + s.charCodeAt(i)) % 1000003;
+  /* ==========================================================================
+     REAL ISO/IEC 18004 QR CODE GENERATOR (VERSION 1-12, EC LEVEL M, ZERO CDN)
+     ========================================================================== */
+  var QR_GF_EXP = new Array(256);
+  var QR_GF_LOG = new Array(256);
+  (function initGaloisField() {
+    var x = 1;
+    for (var i = 0; i < 256; i++) {
+      QR_GF_EXP[i] = x;
+      QR_GF_LOG[x] = i;
+      x <<= 1;
+      if (x & 256) x ^= 285;
     }
-    var size = 13;
-    var rects = [];
-    function isFinder(r, c) {
-      if (r < 4 && c < 4) return true;
-      if (r < 4 && c >= size - 4) return true;
-      if (r >= size - 4 && c < 4) return true;
-      return false;
+    QR_GF_LOG[0] = 0;
+  })();
+
+  function qrGfMul(a, b) {
+    if (a === 0 || b === 0) return 0;
+    return QR_GF_EXP[(QR_GF_LOG[a] + QR_GF_LOG[b]) % 255];
+  }
+
+  function qrRsEcc(data, eccCount) {
+    var gen = [1];
+    for (var i = 0; i < eccCount; i++) {
+      var next = new Array(gen.length + 1);
+      for (var k = 0; k < next.length; k++) next[k] = 0;
+      var factor = QR_GF_EXP[i];
+      for (var j = 0; j < gen.length; j++) {
+        next[j] ^= gen[j];
+        next[j + 1] ^= qrGfMul(gen[j], factor);
+      }
+      gen = next;
     }
-    for (var r = 0; r < size; r++) {
-      for (var c = 0; c < size; c++) {
-        if (isFinder(r, c)) continue;
-        seed = (seed * 16807 + 11) % 2147483647;
-        if (seed % 10 < 5) {
-          rects.push('<rect x="' + (12 + c * 6) + '" y="' + (12 + r * 6) + '" width="5" height="5" fill="#07192f" rx="0.8"/>');
+    var msg = data.slice();
+    for (var p = 0; p < eccCount; p++) msg.push(0);
+    for (var m = 0; m < data.length; m++) {
+      var lead = msg[m];
+      if (lead !== 0) {
+        for (var g = 0; g < gen.length; g++) {
+          msg[m + g] ^= qrGfMul(gen[g], lead);
         }
       }
     }
+    return msg.slice(data.length);
+  }
+
+  var QR_ALIGN = {
+    1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34],
+    7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50],
+    11: [6, 30, 54], 12: [6, 32, 58]
+  };
+  var QR_RS_M = {
+    1: [[1, 26, 16]],
+    2: [[1, 44, 28]],
+    3: [[1, 70, 44]],
+    4: [[2, 50, 32]],
+    5: [[2, 67, 43]],
+    6: [[4, 43, 27]],
+    7: [[4, 49, 31]],
+    8: [[2, 60, 38], [2, 61, 39]],
+    9: [[3, 58, 36], [2, 59, 37]],
+    10: [[4, 69, 43], [1, 70, 44]],
+    11: [[1, 80, 50], [4, 81, 51]],
+    12: [[6, 58, 36], [2, 59, 37]]
+  };
+
+  function utf8ToByteArray(str) {
+    var encoded = unescape(encodeURIComponent(String(str)));
+    var arr = [];
+    for (var i = 0; i < encoded.length; i++) {
+      arr.push(encoded.charCodeAt(i) & 0xff);
+    }
+    return arr;
+  }
+
+  function qrBchFormat(mask) {
+    /* EC Level M = 0b00 */
+    var d = mask & 7;
+    var r = d << 10;
+    for (var i = 14; i >= 10; i--) {
+      if ((r >> i) & 1) r ^= (0x537 << (i - 10));
+    }
+    return ((d << 10) | r) ^ 0x5412;
+  }
+
+  function qrBchVersion(ver) {
+    var r = ver << 12;
+    for (var i = 17; i >= 12; i--) {
+      if ((r >> i) & 1) r ^= (0x1F25 << (i - 12));
+    }
+    return (ver << 12) | r;
+  }
+
+  function buildQrMatrix(text) {
+    var bytes = utf8ToByteArray(text || 'OCN-311026-001');
+    var ver = 1;
+    var spec = null;
+    for (var v = 1; v <= 12; v++) {
+      var groups = QR_RS_M[v];
+      var totalDataBytes = 0;
+      for (var gi = 0; gi < groups.length; gi++) {
+        totalDataBytes += groups[gi][0] * groups[gi][2];
+      }
+      var lenBits = v <= 9 ? 8 : 16;
+      if (4 + lenBits + bytes.length * 8 <= totalDataBytes * 8) {
+        ver = v;
+        spec = groups;
+        break;
+      }
+    }
+    if (!spec) {
+      ver = 12;
+      spec = QR_RS_M[12];
+      bytes = bytes.slice(0, 280);
+    }
+
+    var totalDataCw = 0;
+    for (var s0 = 0; s0 < spec.length; s0++) totalDataCw += spec[s0][0] * spec[s0][2];
+
+    var bits = [];
+    function pushBits(val, count) {
+      for (var b = count - 1; b >= 0; b--) bits.push((val >> b) & 1);
+    }
+    pushBits(4, 4); /* Byte mode */
+    pushBits(bytes.length, ver <= 9 ? 8 : 16);
+    for (var bi = 0; bi < bytes.length; bi++) pushBits(bytes[bi], 8);
+    var maxBits = totalDataCw * 8;
+    for (var t = 0; t < 4 && bits.length < maxBits; t++) bits.push(0);
+    while (bits.length % 8 !== 0) bits.push(0);
+    var padToggle = 0;
+    while (bits.length < maxBits) {
+      pushBits(padToggle ? 0x11 : 0xEC, 8);
+      padToggle ^= 1;
+    }
+
+    var codewords = [];
+    for (var ci = 0; ci < bits.length; ci += 8) {
+      var cw = 0;
+      for (var cb = 0; cb < 8; cb++) cw = (cw << 1) | bits[ci + cb];
+      codewords.push(cw);
+    }
+
+    var dataBlocks = [];
+    var eccBlocks = [];
+    var offset = 0;
+    var maxDataLen = 0;
+    var maxEccLen = 0;
+    for (var g = 0; g < spec.length; g++) {
+      var cnt = spec[g][0], totCw = spec[g][1], datCw = spec[g][2];
+      var eccLen = totCw - datCw;
+      if (datCw > maxDataLen) maxDataLen = datCw;
+      if (eccLen > maxEccLen) maxEccLen = eccLen;
+      for (var c = 0; c < cnt; c++) {
+        var slice = codewords.slice(offset, offset + datCw);
+        offset += datCw;
+        dataBlocks.push(slice);
+        eccBlocks.push(qrRsEcc(slice, eccLen));
+      }
+    }
+
+    var streamBits = [];
+    function pushByte(vByte) {
+      for (var b = 7; b >= 0; b--) streamBits.push((vByte >> b) & 1);
+    }
+    for (var di = 0; di < maxDataLen; di++) {
+      for (var db = 0; db < dataBlocks.length; db++) {
+        if (di < dataBlocks[db].length) pushByte(dataBlocks[db][di]);
+      }
+    }
+    for (var ei = 0; ei < maxEccLen; ei++) {
+      for (var eb = 0; eb < eccBlocks.length; eb++) {
+        if (ei < eccBlocks[eb].length) pushByte(eccBlocks[eb][ei]);
+      }
+    }
+
+    var n = ver * 4 + 17;
+    var bestGrid = null;
+    var bestPenalty = 1e9;
+
+    function buildBaseGrid() {
+      var grid = new Array(n);
+      var fixed = new Array(n);
+      for (var r = 0; r < n; r++) {
+        grid[r] = new Array(n);
+        fixed[r] = new Array(n);
+        for (var c = 0; c < n; c++) { grid[r][c] = 0; fixed[r][c] = false; }
+      }
+      function setFixed(r, c, val) {
+        if (r >= 0 && r < n && c >= 0 && c < n) { grid[r][c] = val; fixed[r][c] = true; }
+      }
+      function placeFinder(topR, leftC) {
+        for (var dr = -1; dr <= 7; dr++) {
+          for (var dc = -1; dc <= 7; dc++) {
+            var rr = topR + dr, cc = leftC + dc;
+            if (rr < 0 || rr >= n || cc < 0 || cc >= n) continue;
+            var isDark = (dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6) &&
+              (dr === 0 || dr === 6 || dc === 0 || dc === 6 || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4));
+            setFixed(rr, cc, isDark ? 1 : 0);
+          }
+        }
+      }
+      placeFinder(0, 0);
+      placeFinder(0, n - 7);
+      placeFinder(n - 7, 0);
+
+      var pos = QR_ALIGN[ver] || [];
+      for (var ai = 0; ai < pos.length; ai++) {
+        for (var aj = 0; aj < pos.length; aj++) {
+          var ar = pos[ai], ac = pos[aj];
+          if (fixed[ar][ac]) continue;
+          for (var dr = -2; dr <= 2; dr++) {
+            for (var dc = -2; dc <= 2; dc++) {
+              var adark = (Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0));
+              setFixed(ar + dr, ac + dc, adark ? 1 : 0);
+            }
+          }
+        }
+      }
+
+      for (var ti = 8; ti < n - 8; ti++) {
+        if (!fixed[6][ti]) setFixed(6, ti, (ti % 2 === 0) ? 1 : 0);
+        if (!fixed[ti][6]) setFixed(ti, 6, (ti % 2 === 0) ? 1 : 0);
+      }
+
+      setFixed(n - 8, 8, 1); /* Dark module */
+
+      /* Reserve format areas */
+      for (var fk = 0; fk <= 8; fk++) {
+        if (!fixed[8][fk]) setFixed(8, fk, 0);
+        if (!fixed[fk][8]) setFixed(fk, 8, 0);
+      }
+      for (var fk2 = 0; fk2 < 8; fk2++) {
+        if (!fixed[8][n - 1 - fk2]) setFixed(8, n - 1 - fk2, 0);
+        if (!fixed[n - 1 - fk2][8]) setFixed(n - 1 - fk2, 8, 0);
+      }
+
+      if (ver >= 7) {
+        var vb = qrBchVersion(ver);
+        for (var vi = 0; vi < 18; vi++) {
+          var vbit = (vb >> vi) & 1;
+          setFixed(Math.floor(vi / 3), n - 11 + (vi % 3), vbit);
+          setFixed(n - 11 + (vi % 3), Math.floor(vi / 3), vbit);
+        }
+      }
+      return { grid: grid, fixed: fixed };
+    }
+
+    function applyMaskBit(mask, r, c) {
+      if (mask === 0) return (r + c) % 2 === 0;
+      if (mask === 1) return r % 2 === 0;
+      if (mask === 2) return c % 3 === 0;
+      if (mask === 3) return (r + c) % 3 === 0;
+      if (mask === 4) return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0;
+      if (mask === 5) return ((r * c) % 2 + (r * c) % 3) === 0;
+      if (mask === 6) return (((r * c) % 2 + (r * c) % 3) % 2) === 0;
+      return (((r + c) % 2 + (r * c) % 3) % 2) === 0;
+    }
+
+    function writeFormatBits(grid, mask) {
+      var fmt = qrBchFormat(mask);
+      for (var k = 0; k <= 5; k++) grid[8][k] = (fmt >> (14 - k)) & 1;
+      grid[8][7] = (fmt >> 8) & 1;
+      grid[8][8] = (fmt >> 7) & 1;
+      grid[7][8] = (fmt >> 6) & 1;
+      for (var k2 = 9; k2 <= 14; k2++) grid[14 - k2][8] = (fmt >> (14 - k2)) & 1;
+
+      for (var j = 0; j <= 6; j++) grid[n - 1 - j][8] = (fmt >> (14 - j)) & 1;
+      for (var j2 = 7; j2 <= 14; j2++) grid[8][n - 15 + j2] = (fmt >> (14 - j2)) & 1;
+    }
+
+    function evalPenalty(grid) {
+      var pen = 0;
+      var darkCount = 0;
+      for (var r = 0; r < n; r++) {
+        var rowRun = 1, colRun = 1;
+        for (var c = 0; c < n; c++) {
+          if (grid[r][c]) darkCount++;
+          if (c > 0) {
+            if (grid[r][c] === grid[r][c - 1]) rowRun++;
+            else { if (rowRun >= 5) pen += 3 + (rowRun - 5); rowRun = 1; }
+            if (grid[c][r] === grid[c - 1][r]) colRun++;
+            else { if (colRun >= 5) pen += 3 + (colRun - 5); colRun = 1; }
+          }
+          if (r < n - 1 && c < n - 1) {
+            var s = grid[r][c] + grid[r][c + 1] + grid[r + 1][c] + grid[r + 1][c + 1];
+            if (s === 0 || s === 4) pen += 3;
+          }
+        }
+        if (rowRun >= 5) pen += 3 + (rowRun - 5);
+        if (colRun >= 5) pen += 3 + (colRun - 5);
+      }
+      pen += Math.floor(Math.abs((darkCount * 100) / (n * n) - 50) / 5) * 10;
+      return pen;
+    }
+
+    for (var mask = 0; mask < 8; mask++) {
+      var st = buildBaseGrid();
+      var gGrid = st.grid, fGrid = st.fixed;
+      var bitIdx = 0;
+      var dirUp = true;
+      for (var col = n - 1; col > 0; col -= 2) {
+        if (col === 6) col--;
+        for (var step = 0; step < n; step++) {
+          var row = dirUp ? (n - 1 - step) : step;
+          for (var sub = 0; sub < 2; sub++) {
+            var cc = col - sub;
+            if (!fGrid[row][cc]) {
+              var bitVal = bitIdx < streamBits.length ? streamBits[bitIdx] : 0;
+              bitIdx++;
+              gGrid[row][cc] = applyMaskBit(mask, row, cc) ? (bitVal ^ 1) : bitVal;
+            }
+          }
+        }
+        dirUp = !dirUp;
+      }
+      writeFormatBits(gGrid, mask);
+      var pScore = evalPenalty(gGrid);
+      if (pScore < bestPenalty) {
+        bestPenalty = pScore;
+        bestGrid = gGrid;
+      }
+    }
+    return bestGrid;
+  }
+
+  function stripVnAccents(s) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, function (c) { return c === 'đ' ? 'd' : 'D'; });
+  }
+
+  function resolveBookingQrText(inputOrCode) {
+    if (inputOrCode && typeof inputOrCode === 'object') {
+      var br = inputOrCode.branch || 'Vincom Dong Khoi Q1';
+      var brShort = br.indexOf('Lotte') !== -1 ? 'Lotte Q7' : (br.indexOf('Cantavil') !== -1 ? 'Cantavil TD' : 'Vincom Q1');
+      var dateM = String(inputOrCode.date || '31/10/2026').match(/(\d{1,2}\/\d{1,2}(?:\/\d{4})?)/);
+      var dShort = dateM ? dateM[1] : '31/10';
+      var st = stripVnAccents(inputOrCode.status || 'DA XAC NHAN');
+      return [
+        'OCEANIA BUFFET',
+        inputOrCode.code || 'OCN-311026-001',
+        (inputOrCode.phone || '1900888999') + ' ' + stripVnAccents(inputOrCode.name || 'Khach'),
+        brShort + ' | ' + (inputOrCode.time || '19:00') + ' ' + dShort,
+        (inputOrCode.adults || 4) + 'NL+' + (inputOrCode.kids || 1) + 'TE+' + (inputOrCode.babies || 0) + 'BE | ' + st
+      ].join('\n');
+    }
+    var raw = String(inputOrCode || 'OCN-311026-001').trim();
+    if (/^OCN-/.test(raw)) {
+      var list = getBookings();
+      var found = list.find(function (b) { return b.code === raw; });
+      if (found) return resolveBookingQrText(found);
+    }
+    return raw;
+  }
+
+  function buildSvgQrCode(codeOrBooking) {
+    var payload = resolveBookingQrText(codeOrBooking);
+    var matrix = buildQrMatrix(payload);
+    var size = matrix.length;
+    var quiet = 4;
+    var dim = size + quiet * 2;
+    var paths = [];
+    for (var r = 0; r < size; r++) {
+      for (var c = 0; c < size; c++) {
+        if (matrix[r][c]) {
+          paths.push('M' + (c + quiet) + ',' + (r + quiet) + 'h1v1h-1z');
+        }
+      }
+    }
+    var safeTitle = payload.replace(/"/g, '&quot;');
     return (
-      '<svg viewBox="0 0 102 102" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect width="102" height="102" fill="#ffffff" rx="4"/>' +
-      '<rect x="10" y="10" width="24" height="24" fill="none" stroke="#07192f" stroke-width="3.5"/>' +
-      '<rect x="16" y="16" width="12" height="12" fill="#ff5a36"/>' +
-      '<rect x="68" y="10" width="24" height="24" fill="none" stroke="#07192f" stroke-width="3.5"/>' +
-      '<rect x="74" y="16" width="12" height="12" fill="#07192f"/>' +
-      '<rect x="10" y="68" width="24" height="24" fill="none" stroke="#07192f" stroke-width="3.5"/>' +
-      '<rect x="16" y="74" width="12" height="12" fill="#07192f"/>' +
-      rects.join('') +
+      '<svg viewBox="0 0 ' + dim + ' ' + dim + '" width="100%" height="100%" shape-rendering="crispEdges" role="img" aria-label="Ma QR dat ban Oceania" data-qr-payload="' + safeTitle + '" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="' + dim + '" height="' + dim + '" fill="#ffffff"/>' +
+      '<path d="' + paths.join('') + '" fill="#000000"/>' +
       '</svg>'
     );
   }
@@ -229,6 +567,8 @@
     saveBookings: saveBookings,
     fmtVnd: fmtVnd,
     buildSvgQrCode: buildSvgQrCode,
+    buildQrMatrix: buildQrMatrix,
+    resolveBookingQrText: resolveBookingQrText,
     showToast: showToast,
     openModal: openModal,
     closeModal: closeModal,
@@ -1188,7 +1528,7 @@
     if (lbPrev) lbPrev.addEventListener('click', function () { showSlide(lbIdx - 1); });
     if (lbNext) lbNext.addEventListener('click', function () { showSlide(lbIdx + 1); });
 
-    document.querySelectorAll('[data-name="Gallery item"], [data-name="Thẻ không gian"], [data-name="Không gian"] img, [data-name="Bộ sưu tập"] img').forEach(function (el) {
+    document.querySelectorAll('[data-name="Gallery item"], [data-name="Thẻ không gian"], [data-name="Không gian"] img, [data-name="Bộ sưu tập"] img, [data-name="Ảnh không gian"], [data-name="Ảnh trải nghiệm"], [data-name="Tiệc biển"], [data-node-id="3375:351"], [data-name="Video trải nghiệm thực tế"]').forEach(function (el) {
       el.style.cursor = 'zoom-in';
       el.addEventListener('click', function (e) {
         var imgEl = el.tagName === 'IMG' ? el : el.querySelector('img');
@@ -1201,7 +1541,8 @@
           } else {
             if (lbImg) lbImg.src = src;
             var p = el.closest('[data-node-id]') ? el.closest('[data-node-id]').querySelector('p') : null;
-            if (lbTitle) lbTitle.textContent = p ? getText(p) : 'Không gian Oceania Seafood & BBQ Buffet';
+            if (lbTitle) lbTitle.textContent = p ? getText(p) : 'Không gian & Trải nghiệm Oceania Buffet';
+            if (lbCap) lbCap.textContent = 'Trải nghiệm thực tế tại hệ thống Oceania Seafood & BBQ Buffet TP.HCM.';
           }
           openModal('oceania-lightbox-modal');
           e.stopPropagation();
@@ -1305,12 +1646,18 @@
     });
 
     /* Sticky Category Tabs on menu.html (Desktop + Tablet + Mobile) */
-    document.querySelectorAll('[data-node-id="3375:243"] > div, [data-name="Bộ lọc danh mục"] > div, [data-name="Thanh danh mục"] > div').forEach(function (tab) {
+    document.querySelectorAll('[data-node-id="3375:243"] > div, [data-name="Bộ lọc danh mục"] > div, [data-name="Thanh danh mục"] > div, [data-node-id="3504:3185"] > div, [data-node-id="3375:37711"] > div').forEach(function (tab) {
       tab.style.cursor = 'pointer';
       tab.addEventListener('click', function () {
         var txt = getText(tab).toLowerCase();
-        if (txt.indexOf('tất cả') !== -1 || txt.indexOf('toàn bộ') !== -1) activeCategory = 'all';
-        else activeCategory = txt;
+        if (txt === 'cay' || txt === 'không cay' || txt === 'must-try') {
+          activeTaste = (activeTaste === txt) ? 'all' : txt;
+        } else if (txt.indexOf('tất cả') !== -1 || txt.indexOf('toàn bộ') !== -1) {
+          activeCategory = 'all';
+          activeTaste = 'all';
+        } else {
+          activeCategory = txt;
+        }
 
         Array.from(tab.parentElement.children).forEach(function (sib) {
           sib.style.backgroundColor = '#ffffff';
@@ -1457,6 +1804,25 @@
     if (daySel) daySel.addEventListener('change', updatePricingCalculator);
     if (shiftSel) shiftSel.addEventListener('change', updatePricingCalculator);
     updatePricingCalculator();
+
+    /* Tier Card quick-selectors (3361:12885 Trưa / 3361:12900 Tối / 3361:12915 VIP) -> sync Calculator */
+    [
+      { nid: '3361:12885', tier: '369000', day: 'weekday', label: 'Buffet Trưa 369.000đ' },
+      { nid: '3361:12900', tier: '469000', day: 'weekend', label: 'Buffet Tối 469.000đ' },
+      { nid: '3361:12915', tier: '569000', day: 'weekend', label: 'Buffet VIP Tôm Hùm 569.000đ' }
+    ].forEach(function (cfg) {
+      var btn = document.querySelector('[data-node-id="' + cfg.nid + '"]');
+      if (btn) {
+        btn.style.cursor = 'pointer';
+        btn.addEventListener('click', function () {
+          if (daySel) daySel.value = cfg.day;
+          if (shiftSel) shiftSel.value = cfg.tier;
+          updatePricingCalculator();
+          if (calcSection) calcSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          showToast('Đã chọn gói ' + cfg.label + ' vào Công cụ tính chi phí.');
+        });
+      }
+    });
 
     /* Tier Cards & Calculator CTA buttons -> booking.html with selected tier & guest counts */
     document.querySelectorAll('[data-name*="Action"], [data-name*="Nút"]').forEach(function (cta) {
@@ -1629,6 +1995,7 @@
 
     document.querySelectorAll('[data-node-id="3361:13380"], .oceania-tablet-view [data-name="Bộ lọc"], .oceania-mobile-view [data-name="Bộ lọc"]').forEach(function (blogFilterWrap) {
       if (blogFilterWrap.parentElement && blogFilterWrap.children.length < 2) return;
+      if (getText(blogFilterWrap).toLowerCase().indexOf('tất cả') === -1) return;
       var scope = blogFilterWrap.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
       var scopedCards = scope.querySelectorAll('[data-name="Bài viết"]');
       if (scopedCards.length === 0) return;
@@ -1702,22 +2069,35 @@
     var mapIframe = document.getElementById('oceania-gmap-iframe');
     var extMapBtn = document.getElementById('oceania-ext-maps-btn');
 
-    document.querySelectorAll('.oceania-map-branch-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        document.querySelectorAll('.oceania-map-branch-btn').forEach(function (b) {
-          b.classList.remove('active');
-        });
-        btn.classList.add('active');
-        var q = btn.getAttribute('data-map-query') || 'Vincom+Center+Dong+Khoi+Quan+1+TPHCM';
-        if (mapIframe) {
-          mapIframe.src = 'https://maps.google.com/maps?q=' + q + '&t=&z=16&ie=UTF8&iwloc=&output=embed';
-        }
-        if (extMapBtn) {
-          extMapBtn.href = 'https://www.google.com/maps/search/?api=1&query=' + q;
-        }
-        showToast('Đã chuyển bản đồ vệ tinh sang: ' + getText(btn));
+    function activateBranchBtn(btn, silent) {
+      if (!btn) return;
+      document.querySelectorAll('.oceania-map-branch-btn').forEach(function (b) {
+        b.classList.remove('active');
       });
+      btn.classList.add('active');
+      var q = btn.getAttribute('data-map-query') || 'Vincom+Center+Dong+Khoi+Quan+1+TPHCM';
+      if (mapIframe) {
+        mapIframe.src = 'https://maps.google.com/maps?q=' + q + '&t=&z=16&ie=UTF8&iwloc=&output=embed';
+      }
+      if (extMapBtn) {
+        extMapBtn.href = 'https://www.google.com/maps/search/?api=1&query=' + q;
+      }
+      if (!silent) showToast('Đã chuyển bản đồ vệ tinh sang: ' + getText(btn));
+    }
+
+    document.querySelectorAll('.oceania-map-branch-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { activateBranchBtn(btn, false); });
     });
+
+    var locParams = new URLSearchParams(window.location.search);
+    var branchParam = (locParams.get('branch') || '').toLowerCase();
+    if (branchParam) {
+      document.querySelectorAll('.oceania-map-branch-btn').forEach(function (btn) {
+        if (getText(btn).toLowerCase().indexOf(branchParam.slice(0, 6)) !== -1) {
+          activateBranchBtn(btn, true);
+        }
+      });
+    }
 
     /* Contact Form Validation (S19) & Success (S20) across Desktop/Tablet/Mobile */
     document.querySelectorAll('#contact-pane-default [data-node-id="3361:14267"], .oceania-tablet-view [data-name="Biểu mẫu"] [data-name="Nút hành động"], .oceania-mobile-view [data-name="Biểu mẫu"] [data-name="Nút hành động"]').forEach(function (sendBtn) {
@@ -2009,6 +2389,21 @@
         showToast('Đã chọn vị trí ứng tuyển. Vui lòng điền thông tin hồ sơ bên dưới.');
       });
     });
+
+    /* Top "Gửi hồ sơ" jump CTA -> smoothly scroll to CV Form */
+    var jumpCvBtn = document.querySelector('[data-node-id="3483:229"]');
+    if (jumpCvBtn) {
+      jumpCvBtn.setAttribute('data-oceania-handled', '1');
+      jumpCvBtn.style.cursor = 'pointer';
+      jumpCvBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var cvInp = document.getElementById('cv-name');
+        if (cvInp) {
+          cvInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(function () { cvInp.focus(); }, 350);
+        }
+      });
+    }
 
     /* Online CV Form Submit (Desktop 3483:271 + Tablet/Mobile) -> S26 */
     document.querySelectorAll('[data-node-id="3483:271"], .oceania-tablet-view [data-name="Form ứng tuyển"] [data-name="Nút hành động"], .oceania-mobile-view [data-name="Form ứng tuyển"] [data-name="Nút hành động"]').forEach(function (submitCvBtn) {

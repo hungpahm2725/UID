@@ -884,6 +884,20 @@ a {
   font-weight: 600 !important;
 }
 
+/* Real ISO/IEC 18004 Scannable QR Container Sizing */
+.oceania-qr-svg {
+  width: 136px !important;
+  height: 136px !important;
+  min-width: 136px !important;
+  min-height: 136px !important;
+  background: #ffffff;
+  border: 1px solid #d4af37;
+  border-radius: 4px;
+  display: block;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
 /* Floating Back-to-Top Button */
 .oceania-back-to-top {
   position: fixed;

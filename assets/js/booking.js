@@ -424,7 +424,7 @@
     [step3Pane, step3ErrorPane].forEach(function (pane) {
       if (!pane) return;
       pane.querySelectorAll('[data-name="Lựa chọn"]').forEach(function (chip) {
-        chip.addEventListener('click', function () {
+        chip.addEventListener('click', function () { 
           var label = app.getText(chip);
           var idx = wizardState.seating.indexOf(label);
           if (idx === -1) {
@@ -522,7 +522,7 @@
           }
         });
         modalS04.querySelectorAll('.oceania-qr-svg').forEach(function (qrBox) {
-          qrBox.innerHTML = app.buildSvgQrCode(newCode);
+          qrBox.innerHTML = app.buildSvgQrCode(newRecord);
         });
         app.openModal('modal-s04');
       }
@@ -550,7 +550,7 @@
       });
     });
 
-    /* Mobile / Tablet Booking Submit Buttons */
+
     document.querySelectorAll('.oceania-mobile-view [data-node-id="3375:36988"], .oceania-tablet-view [data-node-id="3504:2456"]').forEach(function (mobBtn) {
       mobBtn.setAttribute('data-oceania-handled', '1');
       mobBtn.addEventListener('click', function (e) {
@@ -567,7 +567,7 @@
       });
     });
 
-    /* Inside Modal S04: Route to booking-lookup.html?code=... */
+    
     var modalS04 = document.getElementById('modal-s04');
     if (modalS04) {
       modalS04.addEventListener('click', function (e) {
@@ -583,10 +583,15 @@
       });
     }
 
-    /* Initialize default branch and summary panels */
+    
     applyBranchSelection(wizardState.branchKey);
     if (params.get('branch') || params.get('date') || params.get('shift')) {
       switchToStep(2);
     }
+  {
+    
+
+
+  }
   });
 })();

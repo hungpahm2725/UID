@@ -85,7 +85,7 @@
             '<span style="color:#64748b;font-size:10px;margin-top:4px;">Mã QR đã vô hiệu hóa</span>' +
             '</div>';
         } else {
-          qrEl.innerHTML = app.buildSvgQrCode(booking.code);
+          qrEl.innerHTML = app.buildSvgQrCode(booking);
         }
       });
 
@@ -193,11 +193,21 @@
       }
     }
 
-    document.querySelectorAll('[data-name="Nút tra cứu"], [data-node-id="3361:12731"], .oceania-mobile-view [data-node-id="3375:37032"], .oceania-tablet-view [data-node-id="3504:2499"]').forEach(function (btn) {
+    document.querySelectorAll('[data-name="Nút tra cứu"], [data-node-id="3361:12731"], .oceania-mobile-view [data-node-id="3375:37032"], .oceania-tablet-view [data-node-id="3504:2499"], .oceania-tablet-view [data-node-id="3504:2501"], .oceania-mobile-view [data-node-id="3375:37030"]').forEach(function (btn) {
       btn.setAttribute('data-oceania-handled', '1');
+      btn.style.cursor = 'pointer';
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         handleLookupSearch(btn);
+      });
+    });
+
+    document.querySelectorAll('#lookup-code, [data-oceania-field="lookup-code"]').forEach(function (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleLookupSearch(inp);
+        }
       });
     });
 
@@ -239,8 +249,8 @@
       });
     }
 
-    /* 2. E-Ticket Action Buttons across Default & Updated Panes: Reschedule (>= 2h rule), Cancel (S08), Download PDF/PNG (S10) */
-    [defaultPane, updatedPane, under2hPane].forEach(function (pane) {
+    /* 2. E-Ticket Action Buttons across Default, Updated, Tablet & Mobile Panes */
+    [defaultPane, updatedPane, under2hPane, document.querySelector('.oceania-tablet-view'), document.querySelector('.oceania-mobile-view')].forEach(function (pane) {
       if (!pane) return;
       pane.querySelectorAll('[data-name*="Nút"], [data-name*="Action"]').forEach(function (btn) {
         var txt = app.getText(btn);
@@ -393,6 +403,22 @@
         ctx.fillText('Chi nhánh: ' + (activeBooking.branch || 'Vincom Đồng Khởi, Quận 1'), 40, 215);
         ctx.fillText('Thời gian: ' + (activeBooking.time || '19:00') + ' | ' + (activeBooking.date || 'Thứ Bảy, 31/10/2026'), 40, 255);
         ctx.fillText('Số khách: ' + (activeBooking.adults || 4) + ' người lớn, ' + (activeBooking.kids || 1) + ' trẻ em', 40, 295);
+        var payloadText = app.resolveBookingQrText ? app.resolveBookingQrText(activeBooking) : codeStr;
+        var qrMat = app.buildQrMatrix ? app.buildQrMatrix(payloadText) : null;
+        if (qrMat) {
+          var modSize = Math.floor(170 / qrMat.length);
+          var qx0 = 590, qy0 = 135;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(qx0 - 10, qy0 - 10, qrMat.length * modSize + 20, qrMat.length * modSize + 20);
+          ctx.fillStyle = '#07192f';
+          for (var rr = 0; rr < qrMat.length; rr++) {
+            for (var cc = 0; cc < qrMat.length; cc++) {
+              if (qrMat[rr][cc]) {
+                ctx.fillRect(qx0 + cc * modSize, qy0 + rr * modSize, modSize, modSize);
+              }
+            }
+          }
+        }
         var a = document.createElement('a');
         a.download = 'Oceania-ETicket-' + codeStr + '.png';
         a.href = c.toDataURL('image/png');
