@@ -366,7 +366,18 @@
     }
     document.querySelectorAll('.oceania-tablet-view [data-node-id="3504:2427"], .oceania-mobile-view [data-node-id="3375:36959"]').forEach(function (tmWrap) {
       if (tmWrap.parentElement) {
-        tmWrap.parentElement.insertBefore(buildInlineGuestTierWidget(), tmWrap.nextSibling);
+        var isMob = !!tmWrap.closest('.oceania-mobile-view');
+        var widget = buildInlineGuestTierWidget();
+        var contactBox = document.createElement('div');
+        contactBox.style.cssText = 'background:#f8f9fa;border:1px solid #e2e8f0;padding:14px;border-radius:2px;display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;';
+        var pfx = isMob ? 'mob' : 'tab';
+        contactBox.innerHTML =
+          '<p style="font-size:12px;font-weight:700;color:#07192f;text-transform:uppercase;">Thông tin nhận vé QR &amp; Email</p>' +
+          '<input id="' + pfx + '-booking-name" type="text" value="Nguyễn Minh Anh" placeholder="Họ và tên *" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:2px;font-size:13px;" />' +
+          '<input id="' + pfx + '-booking-phone" type="tel" maxlength="10" value="0912345678" placeholder="Số điện thoại 10 số *" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:2px;font-size:13px;" />' +
+          '<input id="' + pfx + '-booking-email" type="email" value="minhanh.nguyen@gmail.com" placeholder="Email nhận QR & thông báo Check-in *" style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:2px;font-size:13px;" />';
+        tmWrap.parentElement.insertBefore(widget, tmWrap.nextSibling);
+        tmWrap.parentElement.insertBefore(contactBox, widget.nextSibling);
       }
       tmWrap.querySelectorAll('[data-name="Chi nhánh"]').forEach(function (card) {
         card.style.cursor = 'pointer';
@@ -463,6 +474,11 @@
         if (phoneInp) phoneInp.focus();
         return;
       }
+      if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+        app.showToast('Địa chỉ Email không hợp lệ! Vui lòng kiểm tra lại (VD: ten@gmail.com).');
+        if (emailInp) emailInp.focus();
+        return;
+      }
 
       /* Generate unique OCN-311026-XXX Booking Code */
       var randomSuffix = Math.floor(100 + Math.random() * 899);
@@ -470,7 +486,7 @@
       wizardState.code = newCode;
       wizardState.name = nameVal;
       wizardState.phone = phoneVal;
-      wizardState.email = emailVal || 'khachhang@oceaniabuffet.vn';
+      wizardState.email = emailVal || 'minhanh.nguyen@gmail.com';
       wizardState.note = noteVal || 'Không có ghi chú thêm.';
 
       var newRecord = {
@@ -555,13 +571,19 @@
       mobBtn.setAttribute('data-oceania-handled', '1');
       mobBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        var mName = document.getElementById('mob-booking-name') || document.getElementById('tab-booking-name');
-        var mPhone = document.getElementById('mob-booking-phone') || document.getElementById('tab-booking-phone');
+        var isMob = !!mobBtn.closest('.oceania-mobile-view');
+        var pfx = isMob ? 'mob' : 'tab';
+        var mName = document.getElementById(pfx + '-booking-name') || document.getElementById('mob-booking-name') || document.getElementById('tab-booking-name');
+        var mPhone = document.getElementById(pfx + '-booking-phone') || document.getElementById('mob-booking-phone') || document.getElementById('tab-booking-phone');
+        var mEmail = document.getElementById(pfx + '-booking-email') || document.getElementById('mob-booking-email') || document.getElementById('tab-booking-email');
         if (mName && document.getElementById('booking-name') && mName.value) {
           document.getElementById('booking-name').value = mName.value;
         }
         if (mPhone && document.getElementById('booking-phone') && mPhone.value) {
           document.getElementById('booking-phone').value = mPhone.value;
+        }
+        if (mEmail && document.getElementById('booking-email') && mEmail.value) {
+          document.getElementById('booking-email').value = mEmail.value;
         }
         completeBookingSubmission();
       });

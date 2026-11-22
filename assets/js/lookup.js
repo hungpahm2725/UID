@@ -89,17 +89,36 @@
         }
       });
 
-      /* Update booking code, customer name, branch, date/time & status across panes */
-      allPanes.concat([document.getElementById('modal-s10')]).forEach(function (container) {
+      /* Update booking code, customer name, branch, date/time & status across panes + Tablet + Mobile */
+      allPanes.concat([
+        document.getElementById('modal-s10'),
+        document.querySelector('.oceania-tablet-view'),
+        document.querySelector('.oceania-mobile-view')
+      ]).forEach(function (container) {
         if (!container) return;
         container.querySelectorAll('p').forEach(function (p) {
           var t = app.getText(p);
-          if (/^OCN-/.test(t)) {
+          var role = p.getAttribute('data-oceania-ticket-field');
+          if (role === 'code' || /^OCN-/.test(t)) {
+            p.setAttribute('data-oceania-ticket-field', 'code');
             p.textContent = booking.code;
-          } else if (t.indexOf('Nguyễn Minh Khôi') !== -1 || t.indexOf('Nguyễn Minh Anh') !== -1 || t.indexOf('Trần Hoàng Nam') !== -1) {
+          } else if (role === 'guest' || t.indexOf('Nguyễn Minh Khôi') !== -1 || t.indexOf('Nguyễn Minh Anh') !== -1 || t.indexOf('Trần Hoàng Nam') !== -1) {
+            p.setAttribute('data-oceania-ticket-field', 'guest');
             p.textContent = booking.name + ' — ' + booking.phone;
-          } else if (t.indexOf('Vincom Đồng Khởi') !== -1 || t.indexOf('Lotte Mart') !== -1 || t.indexOf('Cantavil') !== -1) {
+          } else if (role === 'branch' || t.indexOf('Vincom Đồng Khởi') !== -1 || t.indexOf('Lotte Mart') !== -1 || t.indexOf('Cantavil') !== -1) {
+            p.setAttribute('data-oceania-ticket-field', 'branch');
             p.textContent = booking.branch;
+          } else if (role === 'status' || t.indexOf('ĐÃ XÁC NHẬN') !== -1 || t.indexOf('ĐÃ CHECK-IN') !== -1 || t.indexOf('ĐÃ ĐỔI LỊCH') !== -1) {
+            p.setAttribute('data-oceania-ticket-field', 'status');
+            if (booking.status === 'ĐÃ CHECK-IN (QUÉT QR)') {
+              p.textContent = '✓ ĐÃ CHECK-IN QUA QR';
+              p.style.color = '#10b981';
+            } else if (booking.status === 'ĐÃ HỦY') {
+              p.textContent = '✕ ĐÃ HỦY VÉ';
+              p.style.color = '#ef4444';
+            } else {
+              p.textContent = '✓ ' + (booking.status || 'ĐÃ XÁC NHẬN • HIỆU LỰC');
+            }
           }
         });
       });
@@ -208,6 +227,32 @@
           e.preventDefault();
           handleLookupSearch(inp);
         }
+      });
+    });
+
+    /* Lookup Mode Tabs ("Theo mã đặt bàn" / "Theo số điện thoại" on Tablet 3504:2493 & Mobile 3375:37024) */
+    document.querySelectorAll('[data-node-id="3504:2493"], [data-node-id="3375:37024"]').forEach(function (modeWrap) {
+      var scope = modeWrap.closest('.oceania-tablet-view, .oceania-mobile-view') || document;
+      Array.from(modeWrap.children).forEach(function (tab) {
+        tab.setAttribute('data-oceania-handled', '1');
+        tab.style.cursor = 'pointer';
+        tab.addEventListener('click', function () {
+          var isPhone = app.getText(tab).toLowerCase().indexOf('điện thoại') !== -1;
+          Array.from(modeWrap.children).forEach(function (sib) {
+            sib.style.backgroundColor = '#ffffff';
+            var sp = sib.querySelector('p');
+            if (sp) sp.style.color = '#1e293b';
+          });
+          tab.style.backgroundColor = '#07192f';
+          var pp = tab.querySelector('p');
+          if (pp) pp.style.color = '#f8f9fa';
+          var inp = scope.querySelector('[data-oceania-field="lookup-code"], input');
+          if (inp) {
+            inp.placeholder = isPhone ? 'Nhập số điện thoại 10 số (VD: 0909123456)...' : 'Nhập mã đặt bàn (VD: OCN-311026-001)...';
+            inp.focus();
+          }
+          app.showToast(isPhone ? 'Chế độ tra cứu theo Số điện thoại (xác thực OTP).' : 'Chế độ tra cứu theo Mã đặt bàn OCN.');
+        });
       });
     });
 

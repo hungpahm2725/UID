@@ -484,7 +484,7 @@
       var br = inputOrCode.branch || 'Vincom Dong Khoi Q1';
       var brShort = br.indexOf('Lotte') !== -1 ? 'Lotte Q7' : (br.indexOf('Cantavil') !== -1 ? 'Cantavil TD' : 'Vincom Q1');
       var dateM = String(inputOrCode.date || '31/10/2026').match(/(\d{1,2}\/\d{1,2}(?:\/\d{4})?)/);
-      var dShort = dateM ? dateM[1] : '31/10';
+      var dShort = dateM ? dateM[1] : '31/10/2026';
       var st = stripVnAccents(inputOrCode.status || 'DA XAC NHAN');
       return [
         'OCEANIA BUFFET',
@@ -503,6 +503,32 @@
     return raw;
   }
 
+  function renderQrPngDataUrl(codeOrBooking, sizePx) {
+    var payload = resolveBookingQrText(codeOrBooking);
+    var matrix = buildQrMatrix(payload);
+    var n = matrix.length;
+    var quiet = 4;
+    var dim = n + quiet * 2;
+    var px = Math.max(200, sizePx || 260);
+    var scale = Math.max(2, Math.floor(px / dim));
+    var outSize = dim * scale;
+    var canvas = document.createElement('canvas');
+    canvas.width = outSize;
+    canvas.height = outSize;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, outSize, outSize);
+    ctx.fillStyle = '#000000';
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        if (matrix[r][c]) {
+          ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+        }
+      }
+    }
+    return canvas.toDataURL('image/png');
+  }
+
   function buildSvgQrCode(codeOrBooking) {
     var payload = resolveBookingQrText(codeOrBooking);
     var matrix = buildQrMatrix(payload);
@@ -517,7 +543,7 @@
         }
       }
     }
-    var safeTitle = payload.replace(/"/g, '&quot;');
+    var safeTitle = payload.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     return (
       '<svg viewBox="0 0 ' + dim + ' ' + dim + '" width="100%" height="100%" shape-rendering="crispEdges" role="img" aria-label="Ma QR dat ban Oceania" data-qr-payload="' + safeTitle + '" xmlns="http://www.w3.org/2000/svg">' +
       '<rect width="' + dim + '" height="' + dim + '" fill="#ffffff"/>' +
@@ -569,6 +595,7 @@
     buildSvgQrCode: buildSvgQrCode,
     buildQrMatrix: buildQrMatrix,
     resolveBookingQrText: resolveBookingQrText,
+    renderQrPngDataUrl: renderQrPngDataUrl,
     showToast: showToast,
     openModal: openModal,
     closeModal: closeModal,
@@ -1403,15 +1430,16 @@
     }
 
     /* 6.1B Tablet & Mobile Hero Sliders ([data-name="Điều khiển ảnh"]) */
-    document.querySelectorAll('.oceania-tablet-view [data-name="Mở đầu"], .oceania-mobile-view [data-name="Mở đầu"]').forEach(function (tmHero) {
+    document.querySelectorAll('.oceania-tablet-view [data-name="Mở đầu"], .oceania-mobile-view [data-name="Mở đầu"], .oceania-tablet-view [data-name="Mở đầu trang"], .oceania-mobile-view [data-name="Mở đầu trang"]').forEach(function (tmHero) {
       var tmIdx = 0;
       var tmImg = tmHero.querySelector('img');
       var ctrlWrap = tmHero.querySelector('[data-name="Điều khiển ảnh"]');
       if (!ctrlWrap) return;
-      var btns = ctrlWrap.querySelectorAll('button');
-      var lblEl = btns[0] ? (btns[0].querySelector('p') || btns[0]) : null;
-      var pBtn = btns[1] || ctrlWrap.querySelector('[data-node-id="3504:2075"], [data-node-id="3375:36609"]');
-      var nBtn = btns[2] || ctrlWrap.querySelector('[data-node-id="3504:3993"], [data-node-id="3504:3988"]');
+      var btns = Array.from(ctrlWrap.querySelectorAll('button'));
+      var lblBtn = btns.find(function (b) { var t = getText(b); return t.indexOf('/') !== -1 || t.length > 3; }) || null;
+      var lblEl = lblBtn ? (lblBtn.querySelector('p') || lblBtn) : ctrlWrap.querySelector('p');
+      var pBtn = ctrlWrap.querySelector('[data-node-id="3504:2075"], [data-node-id="3375:36609"]') || btns.find(function (b) { return getText(b).indexOf('←') !== -1; });
+      var nBtn = ctrlWrap.querySelector('[data-node-id="3504:3993"], [data-node-id="3504:3988"]') || btns.find(function (b) { return getText(b).indexOf('→') !== -1; });
       var titleEl = tmHero.querySelector('[data-node-id="3504:2063"] p, [data-node-id="3375:36600"] p');
       var descEl = tmHero.querySelector('[data-node-id="3504:2064"] p, [data-node-id="3375:36601"] p');
 
@@ -1423,9 +1451,9 @@
         if (titleEl) titleEl.textContent = s.titleLine1 + ' ' + s.titleLine2;
         if (descEl) descEl.textContent = s.desc;
       }
-      if (lblEl && lblEl.parentElement) lblEl.parentElement.addEventListener('click', function () { applyTmSlide(tmIdx + 1); });
-      if (pBtn) pBtn.addEventListener('click', function (e) { e.stopPropagation(); applyTmSlide(tmIdx - 1); });
-      if (nBtn) nBtn.addEventListener('click', function (e) { e.stopPropagation(); applyTmSlide(tmIdx + 1); });
+      if (lblBtn) lblBtn.addEventListener('click', function () { applyTmSlide(tmIdx + 1); });
+      if (pBtn) { pBtn.setAttribute('data-oceania-handled', '1'); pBtn.addEventListener('click', function (e) { e.stopPropagation(); applyTmSlide(tmIdx - 1); }); }
+      if (nBtn) { nBtn.setAttribute('data-oceania-handled', '1'); nBtn.addEventListener('click', function (e) { e.stopPropagation(); applyTmSlide(tmIdx + 1); }); }
     });
 
     /* 6.2 Fast Booking Quick-Bar -> booking.html (Desktop + Tablet + Mobile) */
@@ -1674,8 +1702,8 @@
       });
     });
 
-    /* Native Figma Taste Pills (Desktop 3375:258 + Tablet/Mobile) */
-    document.querySelectorAll('[data-node-id="3375:258"] > div, [data-name="Bộ lọc khẩu vị"] > div, [data-name="Khẩu vị"] > div').forEach(function (pill) {
+    /* Native Figma Taste Pills (Desktop 3375:258 + Tablet 3504:3202 + Mobile 3375:37728) */
+    document.querySelectorAll('[data-node-id="3375:258"] > div, [data-node-id="3504:3202"] > div, [data-node-id="3375:37728"] > div, [data-name="Bộ lọc khẩu vị"] > div, [data-name="Khẩu vị"] > div').forEach(function (pill) {
       pill.style.cursor = 'pointer';
       pill.addEventListener('click', function () {
         var txt = getText(pill).toLowerCase();
@@ -1885,10 +1913,10 @@
       });
     }
 
-    /* Filter Promo Cards on promotions.html (Desktop + Tablet + Mobile) */
-    document.querySelectorAll('[data-node-id="3361:13145"], .oceania-tablet-view [data-name="Thanh lọc"], .oceania-mobile-view [data-name="Thanh lọc"]').forEach(function (promoFilterWrap) {
+    /* Filter Promo Cards on promotions.html (Desktop 3361:13145 + Tablet 3504:2763 + Mobile 3375:37292) */
+    document.querySelectorAll('[data-node-id="3361:13145"], [data-node-id="3504:2763"], [data-node-id="3375:37292"], .oceania-tablet-view [data-name="Thanh lọc"], .oceania-mobile-view [data-name="Thanh lọc"]').forEach(function (promoFilterWrap) {
       var scope = promoFilterWrap.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
-      var promoCards = scope.querySelectorAll('[data-name="Thẻ ưu đãi"]');
+      var promoCards = scope.querySelectorAll('[data-name="Ưu đãi"], [data-name="Thẻ ưu đãi"]');
       if (promoCards.length === 0) return;
       Array.from(promoFilterWrap.children).forEach(function (pill) {
         pill.style.cursor = 'pointer';
@@ -1903,14 +1931,23 @@
           var pp = pill.querySelector('p');
           if (pp) pp.style.color = '#f8f9fa';
 
+          var shown = 0;
           promoCards.forEach(function (card) {
             var t = getText(card).toLowerCase();
             var show = cat.indexOf('tất cả') !== -1 ||
-              (cat.indexOf('đoàn') !== -1 && t.indexOf('đoàn') !== -1) ||
+              (cat.indexOf('đoàn') !== -1 && (t.indexOf('đoàn') !== -1 || t.indexOf('10 tặng 1') !== -1 || t.indexOf('nhóm') !== -1)) ||
               (cat.indexOf('sinh nhật') !== -1 && t.indexOf('sinh nhật') !== -1) ||
+              (cat.indexOf('ngân hàng') !== -1 && (t.indexOf('thẻ') !== -1 || t.indexOf('ngân hàng') !== -1 || t.indexOf('visa') !== -1 || t.indexOf('trưa') !== -1 || t.indexOf('club') !== -1)) ||
+              (cat.indexOf('tháng') !== -1 && (t.indexOf('tháng') !== -1 || t.indexOf('mùa') !== -1 || t.indexOf('trưa') !== -1 || t.indexOf('hải sản') !== -1)) ||
               (cat.indexOf('thành viên') !== -1 && (t.indexOf('club') !== -1 || t.indexOf('thẻ') !== -1 || t.indexOf('trưa') !== -1));
             card.style.display = show ? '' : 'none';
+            if (show) shown++;
           });
+          if (shown === 0) {
+            promoCards.forEach(function (card) { card.style.display = ''; });
+            shown = promoCards.length;
+          }
+          showToast('Đang hiển thị ' + shown + ' chương trình ưu đãi · ' + getText(pill));
         });
       });
     });
@@ -2018,6 +2055,57 @@
             card.style.display = show ? '' : 'none';
           });
         });
+      });
+    });
+
+    /* Blog Pagination Pills (Tablet 3504:2942 & Mobile 3375:37470) */
+    document.querySelectorAll('[data-node-id="3504:2942"], [data-node-id="3375:37470"]').forEach(function (pagWrap) {
+      var scope = pagWrap.closest('.oceania-tablet-view, .oceania-mobile-view') || document;
+      Array.from(pagWrap.children).forEach(function (pg) {
+        pg.setAttribute('data-oceania-handled', '1');
+        pg.style.cursor = 'pointer';
+        pg.addEventListener('click', function () {
+          Array.from(pagWrap.children).forEach(function (s) {
+            s.style.backgroundColor = '#ffffff';
+            var p = s.querySelector('p');
+            if (p) p.style.color = '#1e293b';
+          });
+          pg.style.backgroundColor = '#07192f';
+          var pp = pg.querySelector('p');
+          if (pp) pp.style.color = '#f8f9fa';
+          var grid = scope.querySelector('[data-name="Bài viết"]');
+          if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          showToast('Đang hiển thị Cẩm nang Ẩm thực — Trang ' + getText(pg).replace('→', '').trim());
+        });
+      });
+    });
+
+    /* Post Detail Share Buttons (Facebook, Zalo, Copy Link — Desktop + Tablet + Mobile) */
+    document.querySelectorAll('[data-name="Nút Facebook"], [data-name="Nút Zalo"], [data-name="Nút sao chép"], [data-node-id="3504:3087"], [data-node-id="3504:3089"], [data-node-id="3504:3091"], [data-node-id="3375:37614"], [data-node-id="3375:37616"], [data-node-id="3375:37618"]').forEach(function (shareBtn) {
+      shareBtn.setAttribute('data-oceania-handled', '1');
+      shareBtn.style.cursor = 'pointer';
+      shareBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var t = getText(shareBtn).toLowerCase();
+        var shareUrl = window.location.href;
+        if (t.indexOf('facebook') !== -1) {
+          window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl), '_blank', 'noopener,noreferrer');
+          showToast('Đang mở chia sẻ bài viết lên Facebook.');
+        } else if (t.indexOf('zalo') !== -1) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl).catch(function () {});
+          }
+          showToast('Đã sao chép liên kết bài viết để gửi nhanh qua Zalo!');
+        } else {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl).catch(function () {});
+          }
+          var p = shareBtn.querySelector('p') || shareBtn;
+          var orig = p.textContent;
+          p.textContent = '✓ Đã sao chép';
+          setTimeout(function () { p.textContent = orig; }, 1800);
+          showToast('Đã sao chép liên kết bài viết vào bộ nhớ tạm!');
+        }
       });
     });
 
@@ -2203,12 +2291,13 @@
       }
     });
 
-    /* Review Category Filter (Desktop + Tablet + Mobile) */
-    document.querySelectorAll('[data-node-id="3361:14501"], .oceania-tablet-view [data-name="Thanh lọc"], .oceania-mobile-view [data-name="Thanh lọc"]').forEach(function (revFilterWrap) {
+    /* Review Category Filter (Desktop 3361:14501 + Tablet 3504:3822 + Mobile 3375:38160) */
+    document.querySelectorAll('[data-node-id="3361:14501"], [data-node-id="3504:3822"], [data-node-id="3375:38160"], .oceania-tablet-view [data-name="Thanh lọc"], .oceania-mobile-view [data-name="Thanh lọc"]').forEach(function (revFilterWrap) {
       var scope = revFilterWrap.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
-      var revCards = scope.querySelectorAll('[data-name="Thẻ đánh giá"]');
+      var revCards = scope.querySelectorAll('[data-name="Đánh giá khách"], [data-name="Thẻ đánh giá"], [data-node-id="3504:3908"] > div, [data-node-id="3375:38152"] > [data-name="Thẻ nội dung"]:not([data-node-id="3375:38155"])');
       if (revCards.length === 0) return;
       Array.from(revFilterWrap.children).forEach(function (pill) {
+        pill.setAttribute('data-oceania-handled', '1');
         pill.style.cursor = 'pointer';
         pill.addEventListener('click', function () {
           var cat = getText(pill).toLowerCase();
@@ -2221,11 +2310,24 @@
           var pp = pill.querySelector('p');
           if (pp) pp.style.color = '#f8f9fa';
 
+          var shown = 0;
           revCards.forEach(function (card) {
             var t = getText(card).toLowerCase();
-            var show = cat.indexOf('tất cả') !== -1 || cat.indexOf('5 sao') !== -1 || t.indexOf(cat.slice(0, 6)) !== -1;
+            var hasImg = !!card.querySelector('img');
+            var show = cat.indexOf('tất cả') !== -1 ||
+              cat.indexOf('5 sao') !== -1 ||
+              (cat.indexOf('hải sản') !== -1 && (t.indexOf('hải sản') !== -1 || t.indexOf('cua') !== -1 || t.indexOf('tôm') !== -1 || t.indexOf('hàu') !== -1 || t.indexOf('sashimi') !== -1)) ||
+              (cat.indexOf('bbq') !== -1 && (t.indexOf('bbq') !== -1 || t.indexOf('nướng') !== -1 || t.indexOf('wagyu') !== -1 || t.indexOf('bò') !== -1 || t.indexOf('than') !== -1)) ||
+              (cat.indexOf('phục vụ') !== -1 && (t.indexOf('phục vụ') !== -1 || t.indexOf('nhân viên') !== -1 || t.indexOf('tận tâm') !== -1 || t.indexOf('nhanh') !== -1 || t.indexOf('không gian') !== -1)) ||
+              (cat.indexOf('ảnh') !== -1 && (hasImg || t.indexOf('ảnh') !== -1 || t.indexOf('bàn') !== -1));
             card.style.display = show ? '' : 'none';
+            if (show) shown++;
           });
+          if (shown === 0) {
+            revCards.forEach(function (card) { card.style.display = ''; });
+            shown = revCards.length;
+          }
+          showToast('Đã lọc ' + shown + ' đánh giá thực khách · ' + getText(pill));
         });
       });
     });
@@ -2309,24 +2411,31 @@
     var deptWrap = document.querySelector('[data-node-id="3483:86"]');
     var branchWrap = document.querySelector('[data-node-id="3483:95"]');
     var jobListWrap = document.querySelector('[data-node-id="3483:118"]');
-    var allJobs = document.querySelectorAll('[data-node-id="3483:118"] > div, .oceania-tablet-view [data-name="Tin tuyển dụng"], .oceania-mobile-view [data-name="Tin tuyển dụng"]');
+    var allJobs = document.querySelectorAll('[data-node-id="3483:118"] > div, .oceania-tablet-view [data-name="Vị trí"], .oceania-mobile-view [data-name="Vị trí"], .oceania-tablet-view [data-name="Tin tuyển dụng"], .oceania-mobile-view [data-name="Tin tuyển dụng"]');
     if (!deptWrap && allJobs.length === 0 && !document.querySelector('[data-oceania-field="cv-name"]')) return;
 
     var jobCards = jobListWrap ? Array.from(jobListWrap.children) : Array.from(allJobs);
     var activeDept = 'tất cả';
     var activeBranch = 'tất cả';
 
+    function matchDeptText(dept, text) {
+      return dept.indexOf('tất cả') !== -1 ||
+        (dept.indexOf('bếp') !== -1 && (text.indexOf('bếp') !== -1 || text.indexOf('bbq') !== -1 || text.indexOf('line') !== -1 || text.indexOf('nướng') !== -1)) ||
+        ((dept.indexOf('sảnh') !== -1 || dept.indexOf('phục vụ') !== -1) && (text.indexOf('sảnh') !== -1 || text.indexOf('phục vụ') !== -1 || text.indexOf('lễ tân') !== -1 || text.indexOf('thu ngân') !== -1)) ||
+        ((dept.indexOf('quản lý') !== -1 || dept.indexOf('quản trị') !== -1) && (text.indexOf('giám sát') !== -1 || text.indexOf('quản lý') !== -1 || text.indexOf('trưởng') !== -1 || text.indexOf('quản trị') !== -1));
+    }
+
     function applyCareersFilter() {
       jobCards.forEach(function (card) {
         var t = getText(card).toLowerCase();
-        var matchDept = activeDept.indexOf('tất cả') !== -1 ||
-          (activeDept.indexOf('bếp') !== -1 && t.indexOf('bếp') !== -1) ||
-          (activeDept.indexOf('sảnh') !== -1 && (t.indexOf('sảnh') !== -1 || t.indexOf('phục vụ') !== -1 || t.indexOf('lễ tân') !== -1)) ||
-          (activeDept.indexOf('quản lý') !== -1 && (t.indexOf('giám sát') !== -1 || t.indexOf('quản lý') !== -1 || t.indexOf('trưởng') !== -1));
+        var matchDept = matchDeptText(activeDept, t);
         var matchBranch = activeBranch.indexOf('tất cả') !== -1 || t.indexOf('toàn hệ thống') !== -1 ||
-          (activeBranch.indexOf('vincom') !== -1 && t.indexOf('vincom') !== -1) ||
-          (activeBranch.indexOf('lotte') !== -1 && t.indexOf('lotte') !== -1) ||
-          (activeBranch.indexOf('cantavil') !== -1 && t.indexOf('cantavil') !== -1);
+          (activeBranch.indexOf('vincom') !== -1 && (t.indexOf('vincom') !== -1 || t.indexOf('quận 1') !== -1)) ||
+          (activeBranch.indexOf('lotte') !== -1 && (t.indexOf('lotte') !== -1 || t.indexOf('quận 7') !== -1)) ||
+          (activeBranch.indexOf('cantavil') !== -1 && (t.indexOf('cantavil') !== -1 || t.indexOf('thủ đức') !== -1)) ||
+          (activeBranch.indexOf('quận 1') !== -1 && (t.indexOf('quận 1') !== -1 || t.indexOf('vincom') !== -1)) ||
+          (activeBranch.indexOf('quận 7') !== -1 && (t.indexOf('quận 7') !== -1 || t.indexOf('lotte') !== -1)) ||
+          (activeBranch.indexOf('thủ đức') !== -1 && (t.indexOf('thủ đức') !== -1 || t.indexOf('cantavil') !== -1));
         card.style.display = (matchDept && matchBranch) ? '' : 'none';
       });
     }
@@ -2345,9 +2454,88 @@
           var pp = pill.querySelector('p');
           if (pp) pp.style.color = '#f8f9fa';
           applyCareersFilter();
+          showToast('Đã lọc vị trí tuyển dụng · ' + getText(pill));
         });
       });
     }
+
+    /* Tablet (3504:3382) & Mobile (3483:419) Career Department Filter Pills */
+    document.querySelectorAll('[data-node-id="3504:3382"], [data-node-id="3483:419"]').forEach(function (tmDeptWrap) {
+      var scope = tmDeptWrap.closest('.oceania-tablet-view, .oceania-mobile-view') || document;
+      var scopedJobs = scope.querySelectorAll('[data-name="Vị trí"], [data-name="Tin tuyển dụng"], [data-name="Việc làm"]');
+      Array.from(tmDeptWrap.children).forEach(function (pill) {
+        pill.setAttribute('data-oceania-handled', '1');
+        pill.style.cursor = 'pointer';
+        pill.addEventListener('click', function () {
+          var d = getText(pill).toLowerCase();
+          Array.from(tmDeptWrap.children).forEach(function (sib) {
+            sib.style.backgroundColor = '#ffffff';
+            var sp = sib.querySelector('p');
+            if (sp) sp.style.color = '#1e293b';
+          });
+          pill.style.backgroundColor = '#07192f';
+          var pp = pill.querySelector('p');
+          if (pp) pp.style.color = '#f8f9fa';
+          var shown = 0;
+          scopedJobs.forEach(function (card) {
+            var ok = matchDeptText(d, getText(card).toLowerCase());
+            card.style.display = ok ? '' : 'none';
+            if (ok) shown++;
+          });
+          if (shown === 0) scopedJobs.forEach(function (card) { card.style.display = ''; });
+          showToast('Đã lọc tuyển dụng · ' + getText(pill));
+        });
+      });
+    });
+
+    /* Expand / Collapse JD Details when clicking "Mở JD" (3483:137, 157, 177, 216) */
+    document.querySelectorAll('[data-name="Nút mở JD"]').forEach(function (jdBtn) {
+      jdBtn.setAttribute('data-oceania-handled', '1');
+      jdBtn.style.cursor = 'pointer';
+      jdBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var card = jdBtn.closest('[data-name="Việc làm"], [data-name="Việc làm mở JD"], [data-node-id]') || jdBtn.parentElement;
+        var panel = card ? card.querySelector('.oceania-jd-detail-panel') : null;
+        if (panel) {
+          var isHidden = panel.style.display === 'none';
+          panel.style.display = isHidden ? 'block' : 'none';
+          var pLbl = jdBtn.querySelector('p') || jdBtn;
+          pLbl.textContent = isHidden ? 'Thu gọn JD' : 'Mở JD';
+          return;
+        }
+        var titleEl = card ? card.querySelector('p') : null;
+        var roleName = titleEl ? getText(titleEl) : 'Nhân sự Oceania Buffet';
+        var detail = document.createElement('div');
+        detail.className = 'oceania-jd-detail-panel';
+        detail.style.cssText = 'width:100%;margin-top:12px;padding:16px 18px;background:#f8f9fa;border-left:3px solid #d4af37;border-radius:2px;font-size:13px;color:#1e293b;line-height:1.6;';
+        detail.innerHTML =
+          '<p style="font-weight:700;color:#07192f;margin-bottom:6px;">Mô tả công việc &amp; Phúc lợi — ' + roleName + '</p>' +
+          '<p>• Môi trường nhà hàng buffet hải sản 5 sao tại TP.HCM (Vincom Q1, Lotte Q7, Cantavil Thủ Đức).</p>' +
+          '<p>• Thu nhập cạnh tranh + Service Charge + thưởng doanh số tháng + phụ cấp bữa ăn &amp; gửi xe.</p>' +
+          '<p>• Lộ trình đào tạo bài bản từ bếp trưởng và quản lý sảnh Oceania, đóng đầy đủ BHXH.</p>';
+        if (card) card.appendChild(detail);
+        var pLbl2 = jdBtn.querySelector('p') || jdBtn;
+        pLbl2.textContent = 'Thu gọn JD';
+        showToast('Đang xem chi tiết mô tả công việc (JD).');
+      });
+    });
+
+    /* Hero & Banner "Ứng tuyển ngay" Buttons (Desktop 3483:51/52 + Tablet 3504:3344 + Mobile) */
+    document.querySelectorAll('[data-node-id="3483:51"], [data-node-id="3483:52"], [data-node-id="3504:3344"], .oceania-mobile-view [data-name="Nút hành động"]').forEach(function (ctaBtn) {
+      if (getText(ctaBtn).toLowerCase().indexOf('ứng tuyển') === -1) return;
+      ctaBtn.setAttribute('data-oceania-handled', '1');
+      ctaBtn.style.cursor = 'pointer';
+      ctaBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var scope = ctaBtn.closest('.oceania-desktop-view, .oceania-tablet-view, .oceania-mobile-view') || document;
+        var target = scope.querySelector('[data-oceania-field="cv-name"]') || document.getElementById('cv-name') || document.querySelector('[data-node-id="3483:222"]');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (target.focus) setTimeout(function () { target.focus(); }, 300);
+        }
+        showToast('Mời bạn điền thông tin hồ sơ ứng tuyển bên dưới.');
+      });
+    });
 
     if (branchWrap) {
       Array.from(branchWrap.children).forEach(function (pill) {
