@@ -970,7 +970,7 @@
         '<p style="font-size:12px;font-weight:700;color:#ff5a36;letter-spacing:1.1px;text-transform:uppercase;">' +
         (q ? ('KẾT QUẢ CHO "' + query + '" (' + matches.length + ' MÓN)') : '12 MÓN ĐANG PHỤC VỤ TẠI QUẦY LINE') +
         '</p>' +
-        '<a href="menu.html' + (q ? ('?q=' + encodeURIComponent(query)) : '') + '" style="font-size:12px;font-weight:600;color:#07192f;text-decoration:underline;">Xem toàn bộ 50+ món →</a>' +
+        '<a href="menu.html' + (q ? ('?q=' + encodeURIComponent(query)) : '') + '" style="font-size:12px;font-weight:600;color:#07192f;text-decoration:underline;">Xem toàn bộ 50+ món</a>' +
         '</div>';
 
       if (matches.length === 0) {
@@ -1438,8 +1438,8 @@
       var btns = Array.from(ctrlWrap.querySelectorAll('button'));
       var lblBtn = btns.find(function (b) { var t = getText(b); return t.indexOf('/') !== -1 || t.length > 3; }) || null;
       var lblEl = lblBtn ? (lblBtn.querySelector('p') || lblBtn) : ctrlWrap.querySelector('p');
-      var pBtn = ctrlWrap.querySelector('[data-node-id="3504:2075"], [data-node-id="3375:36609"]') || btns.find(function (b) { return getText(b).indexOf('←') !== -1; });
-      var nBtn = ctrlWrap.querySelector('[data-node-id="3504:3993"], [data-node-id="3504:3988"]') || btns.find(function (b) { return getText(b).indexOf('→') !== -1; });
+      var pBtn = ctrlWrap.querySelector('[data-node-id="3504:2075"], [data-node-id="3375:36609"]') || btns.find(function (b) { var t = getText(b); return t.indexOf('←') !== -1 || t.indexOf('‹') !== -1; });
+      var nBtn = ctrlWrap.querySelector('[data-node-id="3504:3993"], [data-node-id="3504:3988"]') || btns.find(function (b) { var t = getText(b); return t.indexOf('→') !== -1 || t.indexOf('›') !== -1; });
       var titleEl = tmHero.querySelector('[data-node-id="3504:2063"] p, [data-node-id="3375:36600"] p');
       var descEl = tmHero.querySelector('[data-node-id="3504:2064"] p, [data-node-id="3375:36601"] p');
 
@@ -1587,6 +1587,144 @@
     var searchInp = searchInputs[0] || null;
     var allDishCards = document.querySelectorAll('.oceania-desktop-view [data-name="Món ăn"], .oceania-tablet-view [data-name="Món ăn"], .oceania-mobile-view [data-name="Món ăn"]');
     if (searchInputs.length === 0 && allDishCards.length === 0) return;
+
+    /* 7.0 Clean Translucent 12-Dish Hero Showcase on menu.html (no thumbnail boxes) */
+    var menuHeroSlides = [
+      {
+        title: 'Tôm hùm bông nướng phô mai đút lò',
+        desc: 'Tôm hùm bông tươi sống bắt trực tiếp từ bể kính nước biển lạnh, xẻ đôi nướng than hồng cùng phô mai Mozzarella và bơ tỏi Pháp.',
+        img: 'assets/figma/46d9d.png'
+      },
+      {
+        title: 'Cua Cà Mau hấp sả & Ghẹ xanh bơi bể',
+        desc: 'Vị ngọt nguyên bản từ cua Cà Mau chắc thịt hấp sả gừng tươi, ăn kèm muối tiêu chanh ớt xanh chuẩn vị biển miền Nam.',
+        img: 'assets/figma/f1d84.png'
+      },
+      {
+        title: 'Bò Wagyu & Thăn ngoại nướng than Binchotan',
+        desc: 'Thịt bò vân mỡ cẩm thạch nướng trên than hoa Nhật Bản không khói và áp chảo đá muối hồng Himalaya, giữ trọn độ mọng nước.',
+        img: 'assets/figma/2bb0e.png'
+      },
+      {
+        title: 'Sashimi Cá hồi Na Uy & Cá ngừ đại dương',
+        desc: 'Hải sản quầy lạnh nhập mới mỗi ngày, thái lát dày tươi ngọt phục vụ trên đá bào cùng wasabi tươi và nước tương Nhật.',
+        img: 'assets/figma/16ace.png'
+      },
+      {
+        title: 'Tôm càng xanh nướng mọi & Bề bề rang me',
+        desc: 'Tôm càng xanh sống size lớn nướng lửa hồng thơm lừng gạch béo, kết hợp bề bề rang me chua ngọt đậm đà hấp dẫn.',
+        img: 'assets/figma/fbc4b.png'
+      },
+      {
+        title: 'Hàu sữa nướng phô mai & Sò điệp mỡ hành',
+        desc: 'Hàu sữa béo ngậy phủ sốt phô mai tan chảy và sò điệp nướng mỡ hành đậu phộng rang, ra lò liên tục nóng hổi tại quầy BBQ.',
+        img: 'assets/figma/f0ea2.png'
+      },
+      {
+        title: 'Dẻ sườn bò Mỹ sốt BBQ & Sườn cừu thảo mộc',
+        desc: 'Dẻ sườn bò ướp sốt BBQ mật ong đậm vị cùng sườn cừu Úc nướng hương thảo, chín mềm mọng ngay trên vỉ than hồng.',
+        img: 'assets/figma/ce17a.png'
+      },
+      {
+        title: 'Lẩu Hải sản chua cay Tomyum & Lẩu nấm',
+        desc: 'Nước dùng Tomyum Thái chua cay bùng vị và lẩu nấm thanh ngọt nhúng cua, tôm, mực và rau xanh tươi ngon ngay tại bàn.',
+        img: 'assets/figma/31e60.png'
+      },
+      {
+        title: 'Ốc hương rang muối ớt & Nghêu hấp Thái',
+        desc: 'Ốc hương giòn sần sật áo lớp muối ớt cay thơm cùng nghêu hấp sả ớt kiểu Thái đánh thức trọn vị giác đầu bữa tiệc.',
+        img: 'assets/figma/0f938.png'
+      },
+      {
+        title: 'Dimsum xửng tre & Há cảo tôm tươi',
+        desc: 'Quầy Dimsum Hong Kong hấp nóng liên tục: há cảo tôm vỏ mỏng giòn ngọt, xíu mại trứng cua và bánh bao kim sa tan chảy.',
+        img: 'assets/figma/5809a.png'
+      },
+      {
+        title: 'Sườn heo nướng mật ong & Mực nướng sa tế',
+        desc: 'Hòa quyện hương mật ong rừng óng ánh của sườn nướng và vị cay nồng đặc trưng của mực tươi nướng sa tế trên than hồng.',
+        img: 'assets/figma/34b1e.png'
+      },
+      {
+        title: 'Panna Cotta chanh dây & Quầy Tráng miệng',
+        desc: 'Khép lại bữa tiệc trọn vẹn với Panna Cotta chanh dây, bánh Tiramisu kiểu Ý, kem Gelato 8 vị, trái cây theo mùa và trà đào cam sả.',
+        img: 'assets/figma/4f793.png'
+      }
+    ];
+
+    function mountMenuHeroSlider(heroSec, imgSel, titleSel, descSel, isDesktop) {
+      if (!heroSec) return;
+      var heroImg = heroSec.querySelector(imgSel);
+      var heroTitle = heroSec.querySelector(titleSel);
+      var heroDesc = heroSec.querySelector(descSel);
+      var curIdx = 0;
+
+      var ctrlBar = document.createElement('div');
+      ctrlBar.setAttribute('data-name', 'Menu hero slider controls');
+      ctrlBar.style.cssText = isDesktop
+        ? 'position:absolute;right:80px;bottom:28px;z-index:5;display:flex;align-items:center;gap:10px;'
+        : 'position:relative;z-index:5;display:flex;align-items:center;justify-content:flex-end;gap:8px;width:100%;margin-top:4px;';
+
+      var countEl = document.createElement('span');
+      countEl.style.cssText = 'color:#d4af37;font-size:12px;font-weight:600;letter-spacing:1.2px;margin-right:4px;';
+
+      var makeArrow = function (lbl, delta) {
+        var ab = document.createElement('button');
+        ab.type = 'button';
+        ab.setAttribute('data-oceania-handled', '1');
+        ab.textContent = lbl;
+        ab.style.cssText = 'width:36px;height:36px;border-radius:2px;border:1px solid rgba(212,175,55,0.75);background:rgba(7,25,47,0.45);backdrop-filter:blur(6px);color:#f8f9fa;font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;';
+        ab.addEventListener('click', function () { applyMenuSlide(curIdx + delta); });
+        return ab;
+      };
+
+      ctrlBar.appendChild(countEl);
+      ctrlBar.appendChild(makeArrow('‹', -1));
+      ctrlBar.appendChild(makeArrow('›', 1));
+      heroSec.appendChild(ctrlBar);
+
+      function applyMenuSlide(idx) {
+        curIdx = (idx + menuHeroSlides.length) % menuHeroSlides.length;
+        var s = menuHeroSlides[curIdx];
+        if (heroImg) {
+          heroImg.style.opacity = '0.35';
+          setTimeout(function () {
+            heroImg.src = s.img;
+            heroImg.style.opacity = '1';
+          }, 160);
+        }
+        if (heroTitle) heroTitle.textContent = s.title;
+        if (heroDesc) heroDesc.textContent = s.desc;
+        var numStr = (curIdx + 1 < 10 ? '0' : '') + (curIdx + 1);
+        var totStr = (menuHeroSlides.length < 10 ? '0' : '') + menuHeroSlides.length;
+        countEl.textContent = numStr + ' / ' + totStr;
+      }
+
+      applyMenuSlide(0);
+      setInterval(function () { applyMenuSlide(curIdx + 1); }, 4500);
+    }
+
+    mountMenuHeroSlider(
+      document.querySelector('[data-node-id="3361:13753"]'),
+      '[data-node-id="3361:13754"] img',
+      '[data-node-id="3361:13761"]',
+      '[data-node-id="3361:13762"]',
+      true
+    );
+    mountMenuHeroSlider(
+      document.querySelector('[data-node-id="3504:3168"]'),
+      '[data-node-id="3504:3169"] img',
+      '[data-node-id="3504:3172"]',
+      '[data-node-id="3504:3173"]',
+      false
+    );
+    mountMenuHeroSlider(
+      document.querySelector('[data-node-id="3375:37694"]'),
+      '[data-node-id="3375:37695"] img',
+      '[data-node-id="3375:37698"]',
+      '[data-node-id="3375:37699"]',
+      false
+    );
 
     var activeCategory = 'all';
     var activeTaste = 'all';
@@ -2408,84 +2546,176 @@
      13. CAREERS PAGE (careers.html): COMBINED JOB FILTERS & ONLINE CV FORM (S26)
      ========================================================================== */
   function initCareersPage() {
-    var deptWrap = document.querySelector('[data-node-id="3483:86"]');
-    var branchWrap = document.querySelector('[data-node-id="3483:95"]');
-    var jobListWrap = document.querySelector('[data-node-id="3483:118"]');
-    var allJobs = document.querySelectorAll('[data-node-id="3483:118"] > div, .oceania-tablet-view [data-name="Vị trí"], .oceania-mobile-view [data-name="Vị trí"], .oceania-tablet-view [data-name="Tin tuyển dụng"], .oceania-mobile-view [data-name="Tin tuyển dụng"]');
-    if (!deptWrap && allJobs.length === 0 && !document.querySelector('[data-oceania-field="cv-name"]')) return;
+    var careerScopes = [
+      {
+        root: document.querySelector('.oceania-desktop-view'),
+        groupWrap: document.querySelector('[data-node-id="3483:86"]'),
+        roleWrap: document.querySelector('[data-node-id="3483:98"]'),
+        areaWrap: document.querySelector('[data-node-id="3483:111"]'),
+        listWrap: document.querySelector('[data-node-id="3483:118"]')
+      },
+      {
+        root: document.querySelector('.oceania-tablet-view'),
+        groupWrap: document.querySelector('[data-node-id="3504:3382"]'),
+        roleWrap: document.querySelector('[data-node-id="3504:3394"]'),
+        areaWrap: document.querySelector('[data-node-id="3504:3407"]'),
+        listWrap: document.querySelector('[data-node-id="3504:3414"]')
+      },
+      {
+        root: document.querySelector('.oceania-mobile-view'),
+        groupWrap: document.querySelector('[data-node-id="3483:419"]'),
+        roleWrap: document.querySelector('[data-node-id="3483:431"]'),
+        areaWrap: document.querySelector('[data-node-id="3483:444"]'),
+        listWrap: document.querySelector('[data-node-id="3483:451"]')
+      }
+    ].filter(function (s) { return s.listWrap || s.groupWrap; });
 
-    var jobCards = jobListWrap ? Array.from(jobListWrap.children) : Array.from(allJobs);
-    var activeDept = 'tất cả';
-    var activeBranch = 'tất cả';
+    if (careerScopes.length === 0 && !document.querySelector('[data-oceania-field="cv-name"]')) return;
 
-    function matchDeptText(dept, text) {
-      return dept.indexOf('tất cả') !== -1 ||
-        (dept.indexOf('bếp') !== -1 && (text.indexOf('bếp') !== -1 || text.indexOf('bbq') !== -1 || text.indexOf('line') !== -1 || text.indexOf('nướng') !== -1)) ||
-        ((dept.indexOf('sảnh') !== -1 || dept.indexOf('phục vụ') !== -1) && (text.indexOf('sảnh') !== -1 || text.indexOf('phục vụ') !== -1 || text.indexOf('lễ tân') !== -1 || text.indexOf('thu ngân') !== -1)) ||
-        ((dept.indexOf('quản lý') !== -1 || dept.indexOf('quản trị') !== -1) && (text.indexOf('giám sát') !== -1 || text.indexOf('quản lý') !== -1 || text.indexOf('trưởng') !== -1 || text.indexOf('quản trị') !== -1));
+    function matchGroup(group, text) {
+      return !group || group.indexOf('tất cả') !== -1 ||
+        (group.indexOf('bếp') !== -1 && (text.indexOf('bếp') !== -1 || text.indexOf('bbq') !== -1 || text.indexOf('nướng') !== -1 || text.indexOf('line') !== -1)) ||
+        ((group.indexOf('sảnh') !== -1 || group.indexOf('phục vụ') !== -1) && (text.indexOf('phục vụ') !== -1 || text.indexOf('thu ngân') !== -1 || text.indexOf('lễ tân') !== -1 || text.indexOf('sảnh') !== -1)) ||
+        ((group.indexOf('quản lý') !== -1 || group.indexOf('quản trị') !== -1) && (text.indexOf('quản lý') !== -1 || text.indexOf('giám sát') !== -1 || text.indexOf('trưởng') !== -1 || text.indexOf('quản trị') !== -1));
     }
 
-    function applyCareersFilter() {
-      jobCards.forEach(function (card) {
-        var t = getText(card).toLowerCase();
-        var matchDept = matchDeptText(activeDept, t);
-        var matchBranch = activeBranch.indexOf('tất cả') !== -1 || t.indexOf('toàn hệ thống') !== -1 ||
-          (activeBranch.indexOf('vincom') !== -1 && (t.indexOf('vincom') !== -1 || t.indexOf('quận 1') !== -1)) ||
-          (activeBranch.indexOf('lotte') !== -1 && (t.indexOf('lotte') !== -1 || t.indexOf('quận 7') !== -1)) ||
-          (activeBranch.indexOf('cantavil') !== -1 && (t.indexOf('cantavil') !== -1 || t.indexOf('thủ đức') !== -1)) ||
-          (activeBranch.indexOf('quận 1') !== -1 && (t.indexOf('quận 1') !== -1 || t.indexOf('vincom') !== -1)) ||
-          (activeBranch.indexOf('quận 7') !== -1 && (t.indexOf('quận 7') !== -1 || t.indexOf('lotte') !== -1)) ||
-          (activeBranch.indexOf('thủ đức') !== -1 && (t.indexOf('thủ đức') !== -1 || t.indexOf('cantavil') !== -1));
-        card.style.display = (matchDept && matchBranch) ? '' : 'none';
-      });
+    function matchRole(role, text) {
+      if (!role || role === 'tất cả') return true;
+      if (role.indexOf('bếp nóng') !== -1) return text.indexOf('bếp nóng') !== -1 || text.indexOf('bếp trưởng') !== -1;
+      if (role.indexOf('bbq') !== -1 || role.indexOf('bếp nướng') !== -1) return text.indexOf('bbq') !== -1 || text.indexOf('bếp') !== -1;
+      if (role.indexOf('phục vụ') !== -1) return text.indexOf('phục vụ') !== -1;
+      if (role.indexOf('thu ngân') !== -1) return text.indexOf('thu ngân') !== -1;
+      if (role.indexOf('quản lý') !== -1) return text.indexOf('quản lý') !== -1 || text.indexOf('sảnh') !== -1;
+      return text.indexOf(role) !== -1;
     }
 
-    if (deptWrap) {
-      Array.from(deptWrap.children).forEach(function (pill) {
-        pill.style.cursor = 'pointer';
-        pill.addEventListener('click', function () {
-          activeDept = getText(pill).toLowerCase();
-          Array.from(deptWrap.children).forEach(function (sib) {
-            sib.style.backgroundColor = '#ffffff';
-            var sp = sib.querySelector('p');
-            if (sp) sp.style.color = '#1e293b';
-          });
-          pill.style.backgroundColor = '#07192f';
-          var pp = pill.querySelector('p');
-          if (pp) pp.style.color = '#f8f9fa';
-          applyCareersFilter();
-          showToast('Đã lọc vị trí tuyển dụng · ' + getText(pill));
+    function matchArea(area, text) {
+      if (!area || area === 'tất cả') return true;
+      if (text.indexOf('toàn hệ thống') !== -1) return true;
+      if (area.indexOf('quận 1') !== -1 || area.indexOf('vincom') !== -1) return text.indexOf('quận 1') !== -1 || text.indexOf('vincom') !== -1;
+      if (area.indexOf('quận 7') !== -1 || area.indexOf('lotte') !== -1) return text.indexOf('quận 7') !== -1 || text.indexOf('lotte') !== -1;
+      if (area.indexOf('thủ đức') !== -1 || area.indexOf('cantavil') !== -1) return text.indexOf('thủ đức') !== -1 || text.indexOf('cantavil') !== -1;
+      return text.indexOf(area) !== -1;
+    }
+
+    function stylePill(pill, active, bgHex, txtHex) {
+      pill.style.backgroundColor = active ? bgHex : '#ffffff';
+      pill.style.borderColor = active ? '#d4af37' : '#e2e8f0';
+      var ps = pill.querySelectorAll('p');
+      if (ps.length > 0) {
+        ps.forEach(function (p) { p.style.color = active ? txtHex : '#1e293b'; });
+      } else {
+        pill.style.color = active ? txtHex : '#1e293b';
+      }
+    }
+
+    careerScopes.forEach(function (sc) {
+      var cards = sc.listWrap
+        ? Array.from(sc.listWrap.children).filter(function (c) { return c.getAttribute('data-name') !== 'Nhãn chính thức' && !c.classList.contains('oceania-careers-empty'); })
+        : [];
+      var activeGroup = 'tất cả';
+      var activeRole = 'tất cả';
+      var activeArea = 'tất cả';
+
+      function resetAllFilters() {
+        activeGroup = 'tất cả';
+        activeRole = 'tất cả';
+        activeArea = 'tất cả';
+        if (sc.groupWrap) {
+          Array.from(sc.groupWrap.children).forEach(function (p, i) { stylePill(p, i === 0, '#07192f', '#f8f9fa'); });
+        }
+        if (sc.roleWrap) {
+          Array.from(sc.roleWrap.children).forEach(function (p) { stylePill(p, false, '#07192f', '#f8f9fa'); });
+        }
+        if (sc.areaWrap) {
+          Array.from(sc.areaWrap.children).forEach(function (p) { stylePill(p, false, '#ff5a36', '#07192f'); });
+        }
+        applyScopeFilter(false);
+      }
+
+      function applyScopeFilter(announce) {
+        var shown = 0;
+        cards.forEach(function (card) {
+          var t = getText(card).toLowerCase();
+          var ok = matchGroup(activeGroup, t) && matchRole(activeRole, t) && matchArea(activeArea, t);
+          card.style.display = ok ? '' : 'none';
+          if (ok) shown++;
         });
-      });
-    }
+        if (sc.listWrap) {
+          var emptyEl = sc.listWrap.querySelector('.oceania-careers-empty');
+          if (shown === 0) {
+            if (!emptyEl) {
+              emptyEl = document.createElement('div');
+              emptyEl.className = 'oceania-careers-empty';
+              emptyEl.style.cssText = 'width:100%;padding:24px;background:#ffffff;border:1px solid #d4af37;border-radius:4px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;';
+              emptyEl.innerHTML =
+                '<div><p style="font-weight:700;color:#07192f;font-size:15px;">Hiện chưa có vị trí khớp đồng thời các tiêu chí bạn chọn</p>' +
+                '<p style="color:#64748b;font-size:13px;margin-top:4px;">Bấm đặt lại bộ lọc để xem toàn bộ vị trí đang tuyển tại TP.HCM.</p></div>' +
+                '<button type="button" class="oceania-reset-careers-btn" style="background:#ff5a36;color:#07192f;border:none;padding:9px 16px;border-radius:2px;font-weight:700;font-size:13px;cursor:pointer;">Xem tất cả vị trí</button>';
+              emptyEl.querySelector('.oceania-reset-careers-btn').addEventListener('click', function () {
+                resetAllFilters();
+                showToast('Đã hiển thị lại toàn bộ vị trí đang tuyển dụng.');
+              });
+              sc.listWrap.appendChild(emptyEl);
+            }
+            emptyEl.style.display = 'flex';
+          } else if (emptyEl) {
+            emptyEl.style.display = 'none';
+          }
+        }
+        if (announce) {
+          showToast('Tìm thấy ' + shown + ' vị trí tuyển dụng phù hợp.');
+        }
+      }
 
-    /* Tablet (3504:3382) & Mobile (3483:419) Career Department Filter Pills */
-    document.querySelectorAll('[data-node-id="3504:3382"], [data-node-id="3483:419"]').forEach(function (tmDeptWrap) {
-      var scope = tmDeptWrap.closest('.oceania-tablet-view, .oceania-mobile-view') || document;
-      var scopedJobs = scope.querySelectorAll('[data-name="Vị trí"], [data-name="Tin tuyển dụng"], [data-name="Việc làm"]');
-      Array.from(tmDeptWrap.children).forEach(function (pill) {
-        pill.setAttribute('data-oceania-handled', '1');
-        pill.style.cursor = 'pointer';
-        pill.addEventListener('click', function () {
-          var d = getText(pill).toLowerCase();
-          Array.from(tmDeptWrap.children).forEach(function (sib) {
-            sib.style.backgroundColor = '#ffffff';
-            var sp = sib.querySelector('p');
-            if (sp) sp.style.color = '#1e293b';
+      /* 1. Khối việc làm (Tất cả | Khối Bếp & Quầy Line | Khối Phục vụ & Sảnh | Khối Quản trị) */
+      if (sc.groupWrap) {
+        Array.from(sc.groupWrap.children).forEach(function (pill) {
+          pill.setAttribute('data-oceania-handled', '1');
+          pill.style.cursor = 'pointer';
+          pill.addEventListener('click', function () {
+            var val = getText(pill).toLowerCase();
+            if (val.indexOf('tất cả') !== -1) {
+              resetAllFilters();
+              showToast('Đang hiển thị tất cả vị trí tuyển dụng.');
+              return;
+            }
+            activeGroup = val;
+            Array.from(sc.groupWrap.children).forEach(function (sib) { stylePill(sib, sib === pill, '#07192f', '#f8f9fa'); });
+            applyScopeFilter(true);
           });
-          pill.style.backgroundColor = '#07192f';
-          var pp = pill.querySelector('p');
-          if (pp) pp.style.color = '#f8f9fa';
-          var shown = 0;
-          scopedJobs.forEach(function (card) {
-            var ok = matchDeptText(d, getText(card).toLowerCase());
-            card.style.display = ok ? '' : 'none';
-            if (ok) shown++;
-          });
-          if (shown === 0) scopedJobs.forEach(function (card) { card.style.display = ''; });
-          showToast('Đã lọc tuyển dụng · ' + getText(pill));
         });
-      });
+      }
+
+      /* 2. Bộ phận (Bếp nóng | Bếp nướng BBQ | Phục vụ bàn | Thu ngân | Quản lý sảnh) */
+      if (sc.roleWrap) {
+        Array.from(sc.roleWrap.children).forEach(function (pill) {
+          pill.setAttribute('data-oceania-handled', '1');
+          pill.style.cursor = 'pointer';
+          pill.addEventListener('click', function () {
+            var val = getText(pill).toLowerCase();
+            var togglingOff = activeRole === val;
+            activeRole = togglingOff ? 'tất cả' : val;
+            Array.from(sc.roleWrap.children).forEach(function (sib) { stylePill(sib, !togglingOff && sib === pill, '#07192f', '#f8f9fa'); });
+            applyScopeFilter(true);
+          });
+        });
+      }
+
+      /* 3. Khu vực (Quận 1 | Quận 7 | Thủ Đức) */
+      if (sc.areaWrap) {
+        Array.from(sc.areaWrap.children).forEach(function (pill) {
+          pill.setAttribute('data-oceania-handled', '1');
+          pill.style.cursor = 'pointer';
+          pill.addEventListener('click', function () {
+            var val = getText(pill).toLowerCase();
+            var togglingOff = activeArea === val;
+            activeArea = togglingOff ? 'tất cả' : val;
+            Array.from(sc.areaWrap.children).forEach(function (sib) { stylePill(sib, !togglingOff && sib === pill, '#ff5a36', '#07192f'); });
+            applyScopeFilter(true);
+          });
+        });
+      }
     });
 
     /* Expand / Collapse JD Details when clicking "Mở JD" (3483:137, 157, 177, 216) */
@@ -2494,7 +2724,7 @@
       jdBtn.style.cursor = 'pointer';
       jdBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        var card = jdBtn.closest('[data-name="Việc làm"], [data-name="Việc làm mở JD"], [data-node-id]') || jdBtn.parentElement;
+        var card = jdBtn.closest('[data-name="Việc làm"], [data-name="Việc làm mở"], [data-name="Việc làm mở JD"], [data-node-id]') || jdBtn.parentElement;
         var panel = card ? card.querySelector('.oceania-jd-detail-panel') : null;
         if (panel) {
           var isHidden = panel.style.display === 'none';
@@ -2536,24 +2766,6 @@
         showToast('Mời bạn điền thông tin hồ sơ ứng tuyển bên dưới.');
       });
     });
-
-    if (branchWrap) {
-      Array.from(branchWrap.children).forEach(function (pill) {
-        pill.style.cursor = 'pointer';
-        pill.addEventListener('click', function () {
-          activeBranch = getText(pill).toLowerCase();
-          Array.from(branchWrap.children).forEach(function (sib) {
-            sib.style.backgroundColor = '#ffffff';
-            var sp = sib.querySelector('p');
-            if (sp) sp.style.color = '#1e293b';
-          });
-          pill.style.backgroundColor = '#ff5a36';
-          var pp = pill.querySelector('p');
-          if (pp) pp.style.color = '#ffffff';
-          applyCareersFilter();
-        });
-      });
-    }
 
     /* Click "Ứng tuyển ngay" on job cards -> pre-fill role select & scroll to CV form */
     document.querySelectorAll('[data-name="Nút ứng tuyển"]').forEach(function (btn) {

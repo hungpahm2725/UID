@@ -871,17 +871,65 @@ a {
   transform: scale(1.04);
 }
 
-/* Active Header Navigation Underline */
+/* Active Header Navigation Underline — clear Figma baked borders on inactive items */
+[data-name="Navigation item"],
+[data-name="Tuyển dụng"] {
+  border-bottom-color: transparent !important;
+  border-bottom-width: 2px !important;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+[data-name="Navigation item"] a,
+[data-name="Navigation item"] p,
+[data-name="Tuyển dụng"] a,
+[data-name="Tuyển dụng"] p {
+  color: #f8f9fa !important;
+}
+
+[data-name="Navigation item"]:hover,
+[data-name="Tuyển dụng"]:hover {
+  border-bottom-color: rgba(212, 175, 55, 0.55) !important;
+}
+
 [data-name="Navigation item"].oceania-nav-active,
 [data-name="Tuyển dụng"].oceania-nav-active {
   border-bottom: 2px solid var(--oceania-gold) !important;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 }
 
+[data-name="Navigation item"].oceania-nav-active a,
 [data-name="Navigation item"].oceania-nav-active p,
+[data-name="Tuyển dụng"].oceania-nav-active a,
 [data-name="Tuyển dụng"].oceania-nav-active p {
-  color: #f8f9fa !important;
+  color: var(--oceania-gold) !important;
   font-weight: 600 !important;
+}
+
+/* Menu Page Translucent Multi-Dish Hero Banner (matching Homepage Hero Scrim) */
+[data-node-id="3361:13753"] {
+  min-height: 410px !important;
+  padding-bottom: 64px !important;
+}
+
+[data-node-id="3361:13754"],
+[data-node-id="3504:3169"],
+[data-node-id="3375:37695"] {
+  width: 100% !important;
+  right: 0 !important;
+}
+
+[data-node-id="3361:13754"] img,
+[data-node-id="3504:3169"] img,
+[data-node-id="3375:37695"] img {
+  transition: opacity 0.35s ease, transform 0.6s ease;
+}
+
+[data-node-id="3361:13755"],
+[data-node-id="3504:3170"],
+[data-node-id="3375:37696"] {
+  width: 100% !important;
+  right: 0 !important;
+  background: linear-gradient(90deg, rgba(7, 25, 47, 0.88) 0%, rgba(7, 25, 47, 0.48) 54%, rgba(7, 25, 47, 0.08) 100%) !important;
 }
 
 /* Real ISO/IEC 18004 Scannable QR Container Sizing */
@@ -1003,7 +1051,6 @@ a {
 .border-2 { border-width: 2px; }
 .border-\[\#ad283d\] { border-color: #ad283d; }
 .border-\[\#d4af37\] { border-color: #d4af37; }
-.border-\[\#d4af37\]\/40 { border-color: rgba(212, 175, 55, 0.4); }
 .border-\[\#e2e8f0\] { border-color: #e2e8f0; }
 .border-\[rgba\(0\,0\,0\,0\)\] { border-color: rgba(0,0,0,0); }
 .border-\[var\(--border\\\/default\,\#e2e8f0\)\] { border-color: #e2e8f0; }
@@ -1106,7 +1153,6 @@ a {
 .h-\[30px\] { height: 30px; }
 .h-\[310px\] { height: 310px; }
 .h-\[320px\] { height: 320px; }
-.h-\[330px\] { height: 330px; }
 .h-\[360px\] { height: 360px; }
 .h-\[366px\] { height: 366px; }
 .h-\[370px\] { height: 370px; }
@@ -1271,7 +1317,6 @@ a {
 .py-\[14px\] { padding-top: 14px; padding-bottom: 14px; }
 .py-\[15px\] { padding-top: 15px; padding-bottom: 15px; }
 .py-\[16px\] { padding-top: 16px; padding-bottom: 16px; }
-.py-\[18px\] { padding-top: 18px; padding-bottom: 18px; }
 .py-\[20px\] { padding-top: 20px; padding-bottom: 20px; }
 .py-\[22px\] { padding-top: 22px; padding-bottom: 22px; }
 .py-\[24px\] { padding-top: 24px; padding-bottom: 24px; }
@@ -1282,7 +1327,6 @@ a {
 .py-\[40px\] { padding-top: 40px; padding-bottom: 40px; }
 .py-\[48px\] { padding-top: 48px; padding-bottom: 48px; }
 .py-\[4px\] { padding-top: 4px; padding-bottom: 4px; }
-.py-\[56px\] { padding-top: 56px; padding-bottom: 56px; }
 .py-\[64px\] { padding-top: 64px; padding-bottom: 64px; }
 .py-\[68px\] { padding-top: 68px; padding-bottom: 68px; }
 .py-\[6px\] { padding-top: 6px; padding-bottom: 6px; }
@@ -1420,13 +1464,11 @@ a {
 .tracking-\[-0\.26px\] { letter-spacing: -0.26px; }
 .tracking-\[-0\.6px\] { letter-spacing: -0.6px; }
 .tracking-\[1\.2px\] { letter-spacing: 1.2px; }
-.tracking-\[1\.3px\] { letter-spacing: 1.3px; }
 .tracking-\[1\.4px\] { letter-spacing: 1.4px; }
 .tracking-\[1\.5px\] { letter-spacing: 1.5px; }
 .tracking-\[1px\] { letter-spacing: 1px; }
 .tracking-\[2\.1px\] { letter-spacing: 2.1px; }
 .tracking-\[2\.6px\] { letter-spacing: 2.6px; }
-.tracking-\[2px\] { letter-spacing: 2px; }
 .tracking-\[4px\] { letter-spacing: 4px; }
 .tracking-\[6px\] { letter-spacing: 6px; }
 .uppercase { text-transform: uppercase; }
@@ -1478,7 +1520,6 @@ a {
 .w-\[560px\] { width: 560px; }
 .w-\[570px\] { width: 570px; }
 .w-\[580px\] { width: 580px; }
-.w-\[590px\] { width: 590px; }
 .w-\[592px\] { width: 592px; }
 .w-\[620px\] { width: 620px; }
 .w-\[680px\] { width: 680px; }
